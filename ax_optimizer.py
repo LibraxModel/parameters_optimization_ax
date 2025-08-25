@@ -98,6 +98,21 @@ class BayesianOptimizer:
         self.experiment_name = experiment_name
         self.random_seed = random_seed
         
+        # 处理字符串到类的转换
+        def convert_string_to_class(class_obj):
+            """将字符串转换为类对象"""
+            if isinstance(class_obj, str):
+                import sys
+                import os
+                sys.path.append(os.path.dirname(__file__))
+                from __init__ import get_class_from_string
+                return get_class_from_string(class_obj)
+            return class_obj
+        
+        surrogate_model_class = convert_string_to_class(surrogate_model_class)
+        kernel_class = convert_string_to_class(kernel_class)
+        acquisition_function_class = convert_string_to_class(acquisition_function_class)
+        
         # 初始化AxClient，直接使用BOTORCH模型
 
         # 创建只使用BOTORCH_MODULAR的生成策略，支持自定义代理模型、核函数和采集函数

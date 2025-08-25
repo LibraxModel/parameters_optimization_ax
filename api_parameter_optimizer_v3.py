@@ -51,6 +51,13 @@ class UpdateRequest(BaseModel):
     objective_weights: Optional[Dict[str, float]] = Field(None, description="目标权重")
     additional_metrics: Optional[List[str]] = Field(None, description="额外跟踪指标")
     seed: Optional[int] = Field(None, description="随机种子")
+    # 新增自定义模型配置
+    surrogate_model_class: Optional[str] = Field(None, description="代理模型类名，如 'SingleTaskGP', 'MultiTaskGP' 等")
+    kernel_class: Optional[str] = Field(None, description="核函数类名，如 'MaternKernel', 'RBFKernel' 等")
+    kernel_options: Optional[Dict[str, Any]] = Field(None, description="核函数参数，如 {'nu': 2.5} for MaternKernel")
+    # 新增采集函数配置
+    acquisition_function_class: Optional[str] = Field(None, description="采集函数类名")
+    acquisition_function_options: Optional[Dict[str, Any]] = Field(None, description="采集函数参数，如 {'beta': 0.1} for UCB")
 
 # 定义更新响应模型
 class UpdateResponse(BaseModel):
@@ -178,6 +185,10 @@ def fix_float_precision(params_list: List[Dict[str, Any]]) -> List[Dict[str, Any
 
 
 
+
+
+
+
 @app.get("/")
 async def root():
     """API根路径"""
@@ -188,11 +199,15 @@ async def root():
             "prior_experiments": "支持先验实验数据",
             "sampling_methods": "支持sobol/lhs/uniform三种采样方式",
             "smart_sampling": "有先验数据时默认sobol，无先验数据时可选择采样方式",
-            "bayesian_optimization": "支持贝叶斯优化，基于历史数据推荐参数"
+            "bayesian_optimization": "支持贝叶斯优化，基于历史数据推荐参数",
+            "custom_surrogate_models": "支持自定义代理模型，如 SingleTaskGP, MultiTaskGP 等",
+            "custom_kernels": "支持自定义核函数，如 MaternKernel, RBFKernel 等",
+            "custom_acquisition_functions": "支持自定义采集函数，包括单目标和多目标采集函数"
         },
         "endpoints": {
             "POST /init": "初始化优化，支持传统采样",
-            "POST /update": "贝叶斯优化接口，基于历史数据推荐下一组参数"
+            "POST /update": "贝叶斯优化接口，支持自定义代理模型、核函数和采集函数",
+            "GET /available_classes": "获取可用的代理模型、核函数和采集函数列表"
         }
     }
 
@@ -200,6 +215,23 @@ async def root():
 async def health_check():
     """健康检查端点"""
     return {"status": "healthy", "service": "parameter_optimization_v3"}
+
+@app.get("/available_classes")
+async def get_available_classes():
+    """获取可用的类列表"""
+    try:
+        import sys
+        import os
+        sys.path.append(os.path.dirname(__file__))
+        from __init__ import get_available_classes, get_class_parameters
+        return {
+            "categories": get_available_classes(),
+            "parameters": get_class_parameters()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取可用类列表失败: {str(e)}")
+
+
 
 @app.post("/init", response_model=InitResponse)
 async def initialize_optimization(request: InitRequest):
@@ -272,7 +304,12 @@ async def update_optimization(request: UpdateRequest):
         optimizer = BayesianOptimizer(
             search_space=search_space,
             optimization_config=optimization_config,
-            random_seed=request.seed
+            random_seed=request.seed,
+            surrogate_model_class=request.surrogate_model_class,
+            kernel_class=request.kernel_class,
+            kernel_options=request.kernel_options,
+            acquisition_function_class=request.acquisition_function_class,
+            acquisition_function_options=request.acquisition_function_options
         )
         
         # 添加历史实验数据
@@ -290,10 +327,36 @@ async def update_optimization(request: UpdateRequest):
         # 修复浮点数精度问题
         next_parameters = fix_float_precision(next_parameters)
         
+        # 构建响应消息
+        message = f"成功推荐{len(next_parameters)}个参数组合"
+        
+        custom_components = []
+        if request.surrogate_model_class:
+            custom_components.append("自定义代理模型")
+        if request.kernel_class:
+            custom_components.append("自定义核函数")
+        if request.acquisition_function_class:
+            custom_components.append("自定义采集函数")
+        
+        if custom_components:
+            message += f"，使用{'+'.join(custom_components)}"
+            
+            # 添加参数信息
+            param_info = []
+            if request.kernel_options:
+                param_info.append(f"核函数参数: {request.kernel_options}")
+            if request.acquisition_function_options:
+                param_info.append(f"采集函数参数: {request.acquisition_function_options}")
+            
+            if param_info:
+                message += f"，{', '.join(param_info)}"
+        else:
+            message += "，使用默认配置"
+        
         return UpdateResponse(
             success=True,
             next_parameters=next_parameters,
-            message=f"成功推荐{len(next_parameters)}个参数组合"
+            message=message
         )
         
     except Exception as e:
