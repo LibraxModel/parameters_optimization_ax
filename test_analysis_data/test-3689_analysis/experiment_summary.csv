@@ -1,0 +1,7 @@
+trial_index,arm_name,trial_status,latency,accuracy,learning_rate,batch_size,hidden_size
+0,0_0,COMPLETED,0.15,0.85,0.01,32,128
+1,1_0,COMPLETED,0.12,0.88,0.05,64,256
+2,2_0,COMPLETED,0.18,0.82,0.02,16,64
+3,3_0,COMPLETED,0.1,0.9,0.03,128,512
+4,4_0,COMPLETED,0.13,0.87,0.08,32,256
+5,5_0,COMPLETED,0.16,0.84,0.015,64,128

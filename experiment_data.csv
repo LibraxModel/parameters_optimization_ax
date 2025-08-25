@@ -1,0 +1,11 @@
+solvent,catalyst,temperature,concentration,yield,side_product
+THF,Pd/C,-10,0.1,72,5
+Toluene,CuO,0,0.2,85,3
+DMSO,CuO,25,1.0,68,8
+THF,CuO,0,0.1,62,7
+THF,None,0,1.0,55,2
+Toluene,Pd/C,10,0.5,78,4
+DMSO,Pd/C,-5,0.3,75,6
+THF,Pd/C,15,0.8,80,5
+Toluene,None,20,0.4,65,3
+DMSO,CuO,5,0.6,70,7
