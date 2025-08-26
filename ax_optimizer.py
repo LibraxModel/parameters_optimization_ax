@@ -611,7 +611,7 @@ def test_optimizer():
     print("- 代理模型：SingleTaskGP（每个目标独立建模）")
     print("- 核函数：Matérn-5/2 (nu=2.5)")
     print("- 对比默认配置：默认使用RBF核函数")
-    
+
     # 为采集函数优化器也添加一些先验数据，避免变换错误
     acquisition_optimizer.add_prior_experiments(prior_experiments)
     

@@ -332,24 +332,22 @@ async def update_optimization(request: UpdateRequest):
         
         custom_components = []
         if request.surrogate_model_class:
-            custom_components.append("自定义代理模型")
+            custom_components.append("代理模型:"+request.surrogate_model_class)
         if request.kernel_class:
-            custom_components.append("自定义核函数")
+            custom_components.append("核函数:"+request.kernel_class)
         if request.acquisition_function_class:
-            custom_components.append("自定义采集函数")
+            custom_components.append("采集函数:"+request.acquisition_function_class)
         
         if custom_components:
             message += f"，使用{'+'.join(custom_components)}"
             
-            # 添加参数信息
-            param_info = []
-            if request.kernel_options:
-                param_info.append(f"核函数参数: {request.kernel_options}")
-            if request.acquisition_function_options:
-                param_info.append(f"采集函数参数: {request.acquisition_function_options}")
-            
-            if param_info:
-                message += f"，{', '.join(param_info)}"
+        parameter_info = []
+        if request.kernel_options:
+            parameter_info.append(f"核函数参数: {request.kernel_options}")
+        if request.acquisition_function_options:
+            parameter_info.append(f"采集函数参数: {request.acquisition_function_options}")     
+        if parameter_info:
+            message += f"，{', '.join(parameter_info)}"
         else:
             message += "，使用默认配置"
         
