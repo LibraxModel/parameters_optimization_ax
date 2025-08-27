@@ -141,3 +141,20 @@ dmypy.json
 # Temporary files
 *.tmp
 *.temp
+
+# Analysis output directories
+parallel_coordinates_analysis/
+custom_model_analysis/
+convenience_function_test/
+contour_test_output/
+ax_analysis_output/
+analysis_output/
+api_analysis_output_*/
+simplified_interface_test/
+convenience_function_test/
+
+# Generated HTML files
+*.html
+
+# CSV data files (optional - uncomment if you don't want to track data files)
+# *.csv

@@ -162,6 +162,22 @@ print(response.json())
 - `acquisition_function_class`: 采集函数类名（可选）
 - `acquisition_function_options`: 采集函数参数（可选）
 
+#### POST `/analysis`
+实验数据分析接口，生成可视化图表
+
+**请求参数:**
+- `file`: 实验数据CSV文件
+- `parameters`: 参数列名，用逗号分隔
+- `objectives`: 目标列名，用逗号分隔
+- `search_space`: 参数空间配置，JSON格式字符串
+- `surrogate_model_class`: 代理模型类名（可选）
+- `kernel_class`: 核函数类名（可选）
+- `kernel_options`: 核函数参数，JSON格式字符串（可选）
+
+**图表生成规则:**
+- 有类别数据时：生成并行坐标图、特征重要性图、交叉验证图（3种）
+- 无类别数据时：生成并行坐标图、特征重要性图、交叉验证图、切片图、等高线图（5种）
+
 ## 🔧 可配置组件详解
 
 ### 代理模型 (Surrogate Models)
@@ -377,6 +393,56 @@ exploration_config = {
 
 response = requests.post("http://localhost:3320/update", json=exploration_config)
 print(response.json())
+```
+
+### 示例 4: 实验数据分析
+
+```python
+import requests
+import json
+
+# 准备分析请求
+analysis_request = {
+    'file': open('experiment_data.csv', 'rb'),
+    'parameters': 'solvent,catalyst,temperature,concentration',
+    'objectives': 'yield,side_product',
+    'search_space': json.dumps([
+        {
+            "name": "solvent",
+            "type": "choice",
+            "values": ["THF", "Toluene", "DMSO"]
+        },
+        {
+            "name": "catalyst",
+            "type": "choice",
+            "values": ["Pd/C", "CuO", "None"]
+        },
+        {
+            "name": "temperature",
+            "type": "range",
+            "bounds": [10, 30]
+        },
+        {
+            "name": "concentration",
+            "type": "range",
+            "bounds": [0.2, 1.0]
+        }
+    ]),
+    'surrogate_model_class': 'SingleTaskGP',
+    'kernel_class': 'MaternKernel',
+    'kernel_options': json.dumps({"nu": 2.5})
+}
+
+# 发送分析请求
+files = {'file': analysis_request['file']}
+data = {k: v for k, v in analysis_request.items() if k != 'file'}
+
+response = requests.post('http://localhost:3320/analysis', files=files, data=data)
+result = response.json()
+
+print(f"分析结果: {result['message']}")
+print(f"输出目录: {result['output_directory']}")
+print(f"生成的图表: {result['generated_plots']}")
 ```
 
 ## 🔍 常用配置组合推荐

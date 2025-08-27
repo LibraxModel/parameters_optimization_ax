@@ -1,9 +1,15 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional, Union, Literal
 import uvicorn
+import pandas as pd
+import tempfile
+import os
+import json
 from doe_init import generate_sobol_parameters, generate_lhs_parameters, generate_uniform_parameters
 from ax_optimizer import BayesianOptimizer, ExperimentResult
+from analysis import ParameterOptimizationAnalysis
+from __init__ import get_class_from_string
 
 app = FastAPI(
     title="参数优化API v3",
@@ -64,6 +70,24 @@ class UpdateResponse(BaseModel):
     success: bool
     next_parameters: List[Dict[str, Any]]
     message: str
+
+# 定义分析请求模型
+class AnalysisRequest(BaseModel):
+    parameters: List[str] = Field(..., description="参数列名列表")
+    objectives: List[str] = Field(..., description="目标列名列表")
+    search_space: List[Dict[str, Any]] = Field(..., description="参数空间配置")
+    # 可选的自定义代理模型配置
+    surrogate_model_class: Optional[str] = Field(None, description="代理模型类名，如 'SingleTaskGP', 'MultiTaskGP' 等")
+    kernel_class: Optional[str] = Field(None, description="核函数类名，如 'MaternKernel', 'RBFKernel' 等")
+    kernel_options: Optional[Dict[str, Any]] = Field(None, description="核函数参数，如 {'nu': 2.5} for MaternKernel")
+
+# 定义分析响应模型
+class AnalysisResponse(BaseModel):
+    success: bool
+    message: str
+    generated_plots: List[str] = Field(..., description="生成的图表列表")
+    output_directory: str = Field(..., description="输出目录路径")
+    has_categorical_data: bool = Field(..., description="是否包含类别数据")
 
 def convert_parameter_space_to_ax_format(parameter_space: List[ParameterSpace]) -> List[Dict[str, Any]]:
     """将参数空间转换为Ax格式"""
@@ -202,11 +226,13 @@ async def root():
             "bayesian_optimization": "支持贝叶斯优化，基于历史数据推荐参数",
             "custom_surrogate_models": "支持自定义代理模型，如 SingleTaskGP, MultiTaskGP 等",
             "custom_kernels": "支持自定义核函数，如 MaternKernel, RBFKernel 等",
-            "custom_acquisition_functions": "支持自定义采集函数，包括单目标和多目标采集函数"
+            "custom_acquisition_functions": "支持自定义采集函数，包括单目标和多目标采集函数",
+            "experiment_analysis": "支持实验数据分析，生成可视化图表"
         },
         "endpoints": {
             "POST /init": "初始化优化，支持传统采样",
             "POST /update": "贝叶斯优化接口，支持自定义代理模型、核函数和采集函数",
+            "POST /analysis": "实验数据分析接口，生成可视化图表",
             "GET /available_classes": "获取可用的代理模型、核函数和采集函数列表"
         }
     }
@@ -359,6 +385,164 @@ async def update_optimization(request: UpdateRequest):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"优化失败: {str(e)}")
+
+def check_categorical_data(data: pd.DataFrame, parameters: List[str]) -> bool:
+    """检查数据中是否包含类别数据"""
+    for param in parameters:
+        if param in data.columns:
+            # 检查是否为非数值类型
+            if not pd.api.types.is_numeric_dtype(data[param]):
+                return True
+            # 检查数值类型但唯一值数量较少（可能是离散数值）
+            unique_count = data[param].nunique()
+            if unique_count <= 10:  # 如果唯一值数量少于等于10，认为是类别数据
+                return True
+    return False
+
+
+
+@app.post("/analysis", response_model=AnalysisResponse)
+async def analyze_experiment_data(
+    file: UploadFile = File(..., description="实验数据CSV文件"),
+    parameters: str = Field(..., description="参数列名，用逗号分隔"),
+    objectives: str = Field(..., description="目标列名，用逗号分隔"),
+    search_space: str = Field(..., description="参数空间配置，JSON格式字符串"),
+    surrogate_model_class: Optional[str] = Field(None, description="代理模型类名"),
+    kernel_class: Optional[str] = Field(None, description="核函数类名"),
+    kernel_options: Optional[str] = Field(None, description="核函数参数，JSON格式字符串")
+):
+    """分析实验数据，生成可视化图表"""
+    try:
+        # 解析参数
+        param_list = [p.strip() for p in parameters.split(',')]
+        objective_list = [o.strip() for o in objectives.split(',')]
+        
+        # 解析搜索空间
+        search_space_dict = json.loads(search_space)
+        
+        # 解析核函数参数
+        kernel_options_dict = None
+        if kernel_options:
+            kernel_options_dict = json.loads(kernel_options)
+        
+        # 获取模型类（使用项目现有的类获取机制）
+        surrogate_model_cls = None
+        kernel_cls = None
+        if surrogate_model_class:
+            surrogate_model_cls = get_class_from_string(surrogate_model_class)
+        if kernel_class:
+            kernel_cls = get_class_from_string(kernel_class)
+        
+        # 保存上传的文件
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp_file:
+            content = await file.read()
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
+        
+        try:
+            # 读取数据
+            data = pd.read_csv(tmp_file_path)
+            
+            # 检查数据中是否包含类别数据
+            has_categorical = check_categorical_data(data, param_list)
+            
+            # 创建输出目录
+            output_dir = f"api_analysis_output_{tempfile.mktemp()}"
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # 创建分析器
+            analyzer = ParameterOptimizationAnalysis(
+                experiment_file=tmp_file_path,
+                output_dir=output_dir
+            )
+            
+            generated_plots = []
+            
+            # 生成并行坐标图
+            print("📊 生成并行坐标图...")
+            parallel_plots = analyzer.create_parallel_coordinates_plots(
+                parameters=param_list,
+                objectives=objective_list
+            )
+            generated_plots.extend([f"parallel_coords_{obj}" for obj in objective_list])
+            
+            # 生成特征重要性图
+            print("📊 生成特征重要性图...")
+            shap_plots = analyzer.create_feature_importance_plots(
+                parameters=param_list,
+                objectives=objective_list
+            )
+            generated_plots.extend([f"feature_importance_{obj}" for obj in objective_list])
+            
+            # 生成交叉验证图
+            print("📊 生成交叉验证图...")
+            cv_plots = analyzer.create_cross_validation_plots(
+                parameters=param_list,
+                objectives=objective_list,
+                search_space=search_space_dict,
+                untransform=True,
+                surrogate_model_class=surrogate_model_cls,
+                kernel_class=kernel_cls,
+                kernel_options=kernel_options_dict
+            )
+            generated_plots.extend([f"cross_validation_{obj}" for obj in objective_list])
+            
+            # 如果没有类别数据，生成额外的图表
+            if not has_categorical:
+                print("📊 生成切片图...")
+                slice_plots = analyzer.create_slice_plots(
+                    parameters=param_list,
+                    objectives=objective_list,
+                    search_space=search_space_dict,
+                    surrogate_model_class=surrogate_model_cls,
+                    kernel_class=kernel_cls,
+                    kernel_options=kernel_options_dict
+                )
+                generated_plots.extend([f"slice_{obj}_{param}" for obj in objective_list for param in param_list])
+                
+                print("📊 生成等高线图...")
+                contour_plots = analyzer.create_contour_plots(
+                    parameters=param_list,
+                    objectives=objective_list,
+                    search_space=search_space_dict,
+                    surrogate_model_class=surrogate_model_cls,
+                    kernel_class=kernel_cls,
+                    kernel_options=kernel_options_dict
+                )
+                generated_plots.extend([f"contour_{obj}_{param1}_{param2}" for obj in objective_list for param1 in param_list for param2 in param_list if param1 != param2])
+            
+            # 保存所有图表
+            analyzer.save_plots()
+            
+            # 构建响应消息
+            if has_categorical:
+                message = f"检测到类别数据，生成了3种图表：并行坐标图、特征重要性图、交叉验证图"
+            else:
+                message = f"未检测到类别数据，生成了5种图表：并行坐标图、特征重要性图、交叉验证图、切片图、等高线图"
+            
+            if surrogate_model_class or kernel_class:
+                custom_components = []
+                if surrogate_model_class:
+                    custom_components.append(f"代理模型:{surrogate_model_class}")
+                if kernel_class:
+                    custom_components.append(f"核函数:{kernel_class}")
+                message += f"，使用{'+'.join(custom_components)}"
+            
+            return AnalysisResponse(
+                success=True,
+                message=message,
+                generated_plots=generated_plots,
+                output_directory=output_dir,
+                has_categorical_data=has_categorical
+            )
+            
+        finally:
+            # 清理临时文件
+            if os.path.exists(tmp_file_path):
+                os.unlink(tmp_file_path)
+                
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"分析失败: {str(e)}")
 
 
 

@@ -23,3 +23,15 @@ typing-extensions>=4.8.0
 # 可选依赖（用于更好的性能）
 # torch>=2.0.0  # 如果需要 GPU 支持，请取消注释并指定版本
 
+# 数据可视化
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.15.0
+
+# 数据分析
+jupyter>=1.0.0
+ipykernel>=6.25.0
+
+# 文件处理
+openpyxl>=3.1.0  # 用于Excel文件读取
+
