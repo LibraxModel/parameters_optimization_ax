@@ -406,7 +406,7 @@ async def analyze_experiment_data(
     file: UploadFile = File(..., description="实验数据CSV文件"),
     parameters: str = Form(..., description="参数列名，用逗号分隔"),
     objectives: str = Form(..., description="目标列名，用逗号分隔"),
-    search_space: str = Form(..., description="参数空间配置，JSON格式字符串"),
+    parameter_space: str = Form(..., description="参数空间配置，JSON格式字符串，使用ParameterSpace格式"),
     surrogate_model_class: Optional[str] = Form(None, description="代理模型类名"),
     kernel_class: Optional[str] = Form(None, description="核函数类名"),
     kernel_options: Optional[str] = Form(None, description="核函数参数，JSON格式字符串")
@@ -417,8 +417,10 @@ async def analyze_experiment_data(
         param_list = [p.strip() for p in parameters.split(',')]
         objective_list = [o.strip() for o in objectives.split(',')]
         
-        # 解析搜索空间
-        search_space_dict = json.loads(search_space)
+        # 解析参数空间并转换为Ax格式
+        parameter_space_json = json.loads(parameter_space)
+        parameter_space_objects = [ParameterSpace(**param) for param in parameter_space_json]
+        search_space_dict = convert_parameter_space_to_ax_format(parameter_space_objects)
         
         # 解析核函数参数
         kernel_options_dict = None
