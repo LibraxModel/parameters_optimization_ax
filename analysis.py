@@ -1093,7 +1093,7 @@ class ParameterOptimizationAnalysis:
         optimizer = BayesianOptimizer(
             search_space=search_space,
             optimization_config=optimization_config,
-            experiment_name="slice_analysis_rebuild",
+            experiment_name="experiment_rebuild",
             random_seed=42,
             # 传递自定义代理模型配置
             surrogate_model_class=surrogate_model_class,

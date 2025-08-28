@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional, Union, Literal
 import uvicorn
@@ -404,12 +404,12 @@ def check_categorical_data(data: pd.DataFrame, parameters: List[str]) -> bool:
 @app.post("/analysis", response_model=AnalysisResponse)
 async def analyze_experiment_data(
     file: UploadFile = File(..., description="实验数据CSV文件"),
-    parameters: str = Field(..., description="参数列名，用逗号分隔"),
-    objectives: str = Field(..., description="目标列名，用逗号分隔"),
-    search_space: str = Field(..., description="参数空间配置，JSON格式字符串"),
-    surrogate_model_class: Optional[str] = Field(None, description="代理模型类名"),
-    kernel_class: Optional[str] = Field(None, description="核函数类名"),
-    kernel_options: Optional[str] = Field(None, description="核函数参数，JSON格式字符串")
+    parameters: str = Form(..., description="参数列名，用逗号分隔"),
+    objectives: str = Form(..., description="目标列名，用逗号分隔"),
+    search_space: str = Form(..., description="参数空间配置，JSON格式字符串"),
+    surrogate_model_class: Optional[str] = Form(None, description="代理模型类名"),
+    kernel_class: Optional[str] = Form(None, description="核函数类名"),
+    kernel_options: Optional[str] = Form(None, description="核函数参数，JSON格式字符串")
 ):
     """分析实验数据，生成可视化图表"""
     try:
@@ -468,7 +468,7 @@ async def analyze_experiment_data(
             
             # 生成特征重要性图
             print("📊 生成特征重要性图...")
-            shap_plots = analyzer.create_feature_importance_plots(
+            shap_plots = analyzer.create_feature_importance_analysis(
                 parameters=param_list,
                 objectives=objective_list
             )
