@@ -125,19 +125,37 @@ def convert_parameter_space_to_ax_format(parameter_space: List[ParameterSpace]) 
                 min_val, max_val = param.values
                 step = param.step
                 
-                # 生成步长序列
+                # 计算小数位数用于精确处理浮点数
+                decimal_places = 0
+                if isinstance(step, float):
+                    step_str = f"{step:.10f}".rstrip('0').rstrip('.')
+                    if '.' in step_str:
+                        decimal_places = len(step_str.split('.')[1])
+                
+                # 生成步长序列，使用round避免浮点数精度问题
                 values = []
                 current_val = min_val
-                while current_val <= max_val:
-                    values.append(current_val)
+                tolerance = step * 0.0001  # 添加小的容差
+                
+                while current_val <= max_val + tolerance:
+                    rounded_val = round(current_val, decimal_places)
+                    if rounded_val <= max_val:
+                        values.append(rounded_val)
                     current_val += step
                 
-                # 确保不超过最大值
-                if values and values[-1] > max_val:
-                    values[-1] = max_val
+                # 确保包含最大值（如果它应该在序列中）
+                max_val_rounded = round(max_val, decimal_places)
+                if max_val_rounded not in values:
+                    # 检查max_val是否应该在序列中
+                    expected_count = round((max_val - min_val) / step) + 1
+                    if len(values) < expected_count:
+                        values.append(max_val_rounded)
+                
+                # 去重并排序
+                values = sorted(list(set(values)))
                 
                 # 确定value_type
-                if any(isinstance(x, float) for x in [min_val, max_val, step]) or any(isinstance(x, float) for x in values):
+                if any(isinstance(x, float) for x in [min_val, max_val, step]) or decimal_places > 0:
                     value_type = "float"
                     values = [float(v) for v in values]
                 else:
