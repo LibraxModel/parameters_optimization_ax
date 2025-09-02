@@ -150,71 +150,77 @@ class ParameterOptimizationAnalysis:
         
         plots = {}
         
-        # 为每个目标创建并行坐标图
-        for objective in objectives:
-            print(f"📊 生成目标 '{objective}' 的并行坐标图...")
-            
-            # 准备数据
-            plot_data = self.experiment_data[parameters + [objective]].copy()
-            plot_data['trial_index'] = range(len(plot_data))
-            
-            # 创建并行坐标图
-            fig = go.Figure(data=
-                go.Parcoords(
-                    line=dict(
-                        color=plot_data[objective],
-                        colorscale='Viridis',
-                        showscale=True,
-                        colorbar=dict(
-                            title=f"{objective} (Color Scale)",
-                            x=1.1,
-                            len=0.8
-                        )
-                    ),
-                    dimensions=[
-                        # Trial Index
-                        dict(
-                            range=[0, len(plot_data) - 1],
-                            label='Trial Index',
-                            values=plot_data['trial_index'],
-                            ticktext=[f"Trial {i+1}" for i in range(len(plot_data))],
-                            tickvals=list(range(len(plot_data)))
-                        ),
-                        # Parameters (handle categorical variables)
-                        *[
-                            self._create_dimension_for_parameter(
-                                param, plot_data[param], param_types.get(param, 'numerical')
-                            )
-                            for param in parameters
-                        ],
-                        # Objective
-                        dict(
-                            range=[plot_data[objective].min(), plot_data[objective].max()],
-                            label=f"{objective} (Objective)",
-                            values=plot_data[objective],
-                            tickformat='.2f'
-                        )
-                    ],
-                    unselected=dict(line=dict(color='lightgray', opacity=0.3))
+        # 创建包含所有目标的统一并行坐标图
+        print(f"📊 生成包含所有目标的并行坐标图...")
+        
+        # 准备数据，包含所有参数和目标
+        plot_data = self.experiment_data[parameters + objectives].copy()
+        plot_data['trial_index'] = range(len(plot_data))
+        
+        # 创建维度列表
+        dimensions = [
+            # Trial Index
+            dict(
+                range=[0, len(plot_data) - 1],
+                label='Trial Index',
+                values=plot_data['trial_index'],
+                ticktext=[f"Trial {i+1}" for i in range(len(plot_data))],
+                tickvals=list(range(len(plot_data)))
+            ),
+            # Parameters (handle categorical variables)
+            *[
+                self._create_dimension_for_parameter(
+                    param, plot_data[param], param_types.get(param, 'numerical')
                 )
-            )
-            
-            # Update layout
-            fig.update_layout(
-                title=dict(
-                    text=f"Parallel Coordinates for {objective}",
-                    x=0.5,
-                    font=dict(size=16)
+                for param in parameters
+            ],
+            # All Objectives
+            *[
+                dict(
+                    range=[plot_data[objective].min(), plot_data[objective].max()],
+                    label=f"{objective}",
+                    values=plot_data[objective],
+                    tickformat='.2f'
+                )
+                for objective in objectives
+            ]
+        ]
+        
+        # 创建并行坐标图
+        fig = go.Figure(data=
+            go.Parcoords(
+                line=dict(
+                    color=plot_data[color_by],
+                    colorscale='Viridis',
+                    showscale=True,
+                    colorbar=dict(
+                        title=f"{color_by} (Color Scale)",
+                        x=1.1,
+                        len=0.8
+                    )
                 ),
-                plot_bgcolor='white',
-                paper_bgcolor='white',
-                font=dict(size=11),
-                height=700,
-                width=1200,
-                margin=dict(l=50, r=150, t=80, b=50)
+                dimensions=dimensions,
+                unselected=dict(line=dict(color='lightgray', opacity=0.3))
             )
-            
-            plots[f"parallel_coords_{objective}"] = fig
+        )
+        
+        # Update layout
+        obj_names = ', '.join(objectives)
+        fig.update_layout(
+            title=dict(
+                text=f"Parallel Coordinates Plot - Parameters & Objectives ({obj_names})",
+                x=0.5,
+                font=dict(size=16)
+            ),
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            font=dict(size=11),
+            height=700,
+            width=max(1200, 150 * (len(parameters) + len(objectives) + 1)),  # 动态调整宽度
+            margin=dict(l=50, r=150, t=80, b=50)
+        )
+        
+        plots["parallel_coords_combined"] = fig
         
         self.plots.update(plots)
         return plots

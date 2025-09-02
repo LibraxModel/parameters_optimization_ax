@@ -484,7 +484,7 @@ async def analyze_experiment_data(
                 parameters=param_list,
                 objectives=objective_list
             )
-            generated_plots.extend([f"parallel_coords_{obj}" for obj in objective_list])
+            generated_plots.append("parallel_coords_combined")
             
             # 生成特征重要性图
             print("📊 生成特征重要性图...")
@@ -535,10 +535,15 @@ async def analyze_experiment_data(
             analyzer.save_plots()
             
             # 构建响应消息
+            plot_count = len(generated_plots)
             if has_categorical:
-                message = f"检测到类别数据，生成了3种图表：并行坐标图、特征重要性图、交叉验证图"
+                message = f"检测到类别数据，生成了3种类型共{plot_count}个图表：并行坐标图（1个）、特征重要性图（{len(objective_list)}个）、交叉验证图（{len(objective_list)}个）"
             else:
-                message = f"未检测到类别数据，生成了5种图表：并行坐标图、特征重要性图、交叉验证图、切片图、等高线图"
+                # 计算非类别数据的图表数量
+                feature_plots = len(objective_list)  # 特征重要性图
+                cv_plots = len(objective_list)  # 交叉验证图
+                slice_plots = plot_count - 1 - feature_plots - cv_plots  # 减去并行坐标图、特征重要性图、交叉验证图
+                message = f"未检测到类别数据，生成了5种类型共{plot_count}个图表：并行坐标图（1个）、特征重要性图（{feature_plots}个）、交叉验证图（{cv_plots}个）、切片图和等高线图（{slice_plots}个）"
             
             if surrogate_model_class or kernel_class:
                 custom_components = []
