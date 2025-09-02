@@ -467,7 +467,7 @@ async def analyze_experiment_data(
             has_categorical = check_categorical_data(data, param_list)
             
             # 创建输出目录
-            output_dir = f"api_analysis_output_{tempfile.mktemp()}"
+            output_dir = f"analysis_output_{tempfile.mktemp()}"
             os.makedirs(output_dir, exist_ok=True)
             
             # 创建分析器
