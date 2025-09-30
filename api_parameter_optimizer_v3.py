@@ -180,6 +180,44 @@ def convert_parameter_space_to_ax_format(parameter_space: List[ParameterSpace]) 
                 })
     return search_space
 
+def convert_parameter_space_to_ax_format_for_analysis(parameter_space: List[ParameterSpace]) -> List[Dict[str, Any]]:
+    """将参数空间转换为Ax格式（专门用于analysis接口，忽略step参数）"""
+    search_space = []
+    for param in parameter_space:
+        if param.type == "choice":
+            # 确定value_type：字符串、浮点数、整数
+            if all(isinstance(x, str) for x in param.values):
+                value_type = "str"
+                values = param.values
+            else:
+                # 对于数值类型，统一使用float以避免类型转换问题
+                value_type = "float"
+                values = [float(v) for v in param.values]
+            
+            search_space.append({
+                "name": param.name,
+                "type": "choice",
+                "values": values,
+                "value_type": value_type,
+                "is_ordered": True,
+                "sort_values": True
+            })
+        else:  # range类型
+            if len(param.values) != 2:
+                raise ValueError(f"参数 {param.name} 的range类型必须提供[最小值, 最大值]")
+            
+            # 在analysis接口中，忽略step参数，始终保持为range类型
+            # 为了兼容CSV数据中的numpy.float64类型，统一使用float类型
+            value_type = "float"
+            
+            search_space.append({
+                "name": param.name,
+                "type": "range",
+                "bounds": param.values,
+                "value_type": value_type
+            })
+    return search_space
+
 def convert_prior_experiments_to_dict(prior_experiments: List[PriorExperiment]) -> List[Dict[str, Any]]:
     """将先验实验数据转换为字典格式"""
     experiments = []
@@ -435,10 +473,10 @@ async def analyze_experiment_data(
         param_list = [p.strip() for p in parameters.split(',')]
         objective_list = [o.strip() for o in objectives.split(',')]
         
-        # 解析参数空间并转换为Ax格式
+        # 解析参数空间并转换为Ax格式（analysis接口忽略step参数）
         parameter_space_json = json.loads(parameter_space)
         parameter_space_objects = [ParameterSpace(**param) for param in parameter_space_json]
-        search_space_dict = convert_parameter_space_to_ax_format(parameter_space_objects)
+        search_space_dict = convert_parameter_space_to_ax_format_for_analysis(parameter_space_objects)
         
         # 解析核函数参数
         kernel_options_dict = None
