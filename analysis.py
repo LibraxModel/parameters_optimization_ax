@@ -570,6 +570,10 @@ class ParameterOptimizationAnalysis:
                 plot_key = f"slice_{objective}_{param}"
                 plots[plot_key] = slice_fig
                 self.plots[plot_key] = slice_fig
+                
+                # 立即保存当前生成的切片图
+                saved_path = self.save_single_plot(plot_key, slice_fig)
+                
         
         return plots
     
@@ -692,6 +696,10 @@ class ParameterOptimizationAnalysis:
                     plot_key = f"contour_{objective}_{param1}_{param2}"
                     plots[plot_key] = contour_fig
                     self.plots[plot_key] = contour_fig
+                    
+                    # 立即保存当前生成的等高线图
+                    saved_path = self.save_single_plot(plot_key, contour_fig)
+                    
         
         return plots
     
@@ -728,13 +736,16 @@ class ParameterOptimizationAnalysis:
             # 创建网格
             param1_grid, param2_grid = np.meshgrid(param1_values, param2_values)
             
-            # 计算status_quo值（其他参数的均值）
-            other_params = [p for p in trials_df.columns if p in param_types.keys() and p not in [param1, param2]]
+            # 使用中位数和众数方法，确保等高线图平滑
+            # 排除目标变量（因变量），只包含其他输入参数
+            other_params = [p for p in trials_df.columns if p in param_types.keys() and p not in [param1, param2, objective]]
             status_quo = {}
             for p in other_params:
                 if pd.api.types.is_numeric_dtype(trials_df[p]):
-                    status_quo[p] = trials_df[p].mean()
+                    # 使用中位数，对异常值更鲁棒
+                    status_quo[p] = trials_df[p].median()
                 else:
+                    # 对于类别参数，使用众数
                     status_quo[p] = trials_df[p].mode().iloc[0] if not trials_df[p].mode().empty else trials_df[p].iloc[0]
             
             status_quo = pd.Series(status_quo)
@@ -745,7 +756,7 @@ class ParameterOptimizationAnalysis:
             for i in range(n_points):
                 for j in range(n_points):
                     try:
-                        # 创建预测数据点
+                        # 创建预测数据点（固定其他参数为中位数/众数值）
                         X_pred = status_quo.copy()
                         X_pred[param1] = param1_grid[i, j]
                         X_pred[param2] = param2_grid[i, j]
@@ -782,8 +793,35 @@ class ParameterOptimizationAnalysis:
                 colorbar=dict(
                     title=dict(text=objective)
                 ),
-                name='Predicted Outcome'
+                name='Predicted Outcome',
+                hovertemplate=self._create_contour_hover_template(param1, param2, objective, status_quo, other_params) +
+                             f'<b>{param1}</b>: %{{x}}<br>' +
+                             f'<b>{param2}</b>: %{{y}}<br>' +
+                             f'<b>{objective} (Predicted)</b>: %{{z:.3f}}<br>' +
+                             '<extra></extra>'
             ))
+            
+            # 为实际观测点创建详细的hover信息
+            # 每个观测点都应该显示该点的真实参数值
+            observation_hover_templates = []
+            for idx, row in trials_df.iterrows():
+                # 为每个观测点创建完整的hover信息
+                hover_info = f'<b>{param1}</b>: {row[param1]:.3f}<br>'
+                hover_info += f'<b>{param2}</b>: {row[param2]:.3f}<br>'
+                hover_info += f'<b>{objective} (Observed)</b>: {row[objective]:.3f}<br>'
+                hover_info += '<b>Other Parameters:</b><br>'
+                
+                # 添加该样本点的其他参数值（每个点都不同）
+                for other_param in other_params:
+                    if other_param in row:
+                        value = row[other_param]
+                        if pd.api.types.is_numeric_dtype(trials_df[other_param]):
+                            hover_info += f'  {other_param}: {value:.3f}<br>'
+                        else:
+                            hover_info += f'  {other_param}: {value}<br>'
+                
+                hover_info += '<extra></extra>'
+                observation_hover_templates.append(hover_info)
             
             # 添加实际观测点
             fig.add_trace(go.Scatter(
@@ -796,10 +834,8 @@ class ParameterOptimizationAnalysis:
                     symbol='circle'
                 ),
                 name='Actual Observations',
-                hovertemplate=f'<b>{param1}</b>: %{{x}}<br>' +
-                             f'<b>{param2}</b>: %{{y}}<br>' +
-                             f'<b>{objective}</b>: %{{text}}<br>' +
-                             '<extra></extra>',
+                hovertemplate='%{customdata}<extra></extra>',
+                customdata=observation_hover_templates,
                 text=trials_df[objective]
             ))
             
@@ -875,12 +911,14 @@ class ParameterOptimizationAnalysis:
             # 获取已采样的参数值
             sampled_values = sorted(trials_df[param].unique())
             
-            # 计算status_quo值（其他参数的均值或众数）
-            other_params = [p for p in trials_df.columns if p in param_types.keys() and p != param]
+            # 使用中位数和众数方法，确保图表平滑
+            # 排除目标变量（因变量），只包含其他输入参数
+            other_params = [p for p in trials_df.columns if p in param_types.keys() and p not in [param, objective]]
             status_quo = {}
             for p in other_params:
                 if pd.api.types.is_numeric_dtype(trials_df[p]):
-                    status_quo[p] = trials_df[p].mean()
+                    # 使用中位数，对异常值更鲁棒
+                    status_quo[p] = trials_df[p].median()
                 else:
                     # 对于类别参数，使用众数
                     status_quo[p] = trials_df[p].mode().iloc[0] if not trials_df[p].mode().empty else trials_df[p].iloc[0]
@@ -895,7 +933,7 @@ class ParameterOptimizationAnalysis:
             # 对每个参数值进行预测
             for param_val in param_values:
                 try:
-                    # 创建预测数据点（固定其他参数为status_quo值）
+                    # 创建预测数据点（固定其他参数为中位数/众数值）
                     X_pred = status_quo.copy()
                     X_pred[param] = param_val
                     
@@ -966,7 +1004,8 @@ class ParameterOptimizationAnalysis:
                 mode='lines',
                 line=dict(color='#1f77b4', width=2),
                 name='Predicted Outcome ',
-                hovertemplate=f'<b>{param}</b>: %{{x}}<br>' +
+                hovertemplate=self._create_slice_hover_template(param, objective, status_quo, other_params) +
+                             f'<b>{param}</b>: %{{x}}<br>' +
                              f'<b>{objective} (Predicted)</b>: %{{y:.3f}}<br>' +
                              '<extra></extra>'
             ))
@@ -993,6 +1032,39 @@ class ParameterOptimizationAnalysis:
                     else:
                         sampled_y.append(predictions[sampled_indices[sampled_indices.index(x_val)]])
                 
+                # 为采样点创建详细的hover信息
+                # 每个采样点都应该显示该点的真实参数值
+                sampled_hover_templates = []
+                for i, x_val in enumerate(sampled_x):
+                    # 找到对应的原始数据行
+                    closest_idx = None
+                    min_diff = float('inf')
+                    for idx, row in trials_df.iterrows():
+                        if abs(row[param] - x_val) < min_diff:
+                            min_diff = abs(row[param] - x_val)
+                            closest_idx = idx
+                    
+                    if closest_idx is not None:
+                        # 获取该样本点的所有参数值
+                        sample_row = trials_df.iloc[closest_idx]
+                        hover_info = f'<b>{param}</b>: {x_val:.3f}<br>'
+                        hover_info += f'<b>{objective} (Observed)</b>: {sampled_y[i]:.3f}<br>'
+                        hover_info += '<b>Other Parameters:</b><br>'
+                        
+                        # 添加该样本点的其他参数值（每个点都不同）
+                        for other_param in other_params:
+                            if other_param in sample_row:
+                                value = sample_row[other_param]
+                                if pd.api.types.is_numeric_dtype(trials_df[other_param]):
+                                    hover_info += f'  {other_param}: {value:.3f}<br>'
+                                else:
+                                    hover_info += f'  {other_param}: {value}<br>'
+                        
+                        hover_info += '<extra></extra>'
+                        sampled_hover_templates.append(hover_info)
+                    else:
+                        sampled_hover_templates.append(f'<b>{param}</b>: {x_val:.3f}<br><b>{objective} (Observed)</b>: {sampled_y[i]:.3f}<br><extra></extra>')
+                
                 fig.add_trace(go.Scatter(
                     x=sampled_x,
                     y=sampled_y,
@@ -1003,9 +1075,8 @@ class ParameterOptimizationAnalysis:
                         size=8
                     ),
                     name='Sampled Points',
-                    hovertemplate=f'<b>{param}</b>: %{{x}}<br>' +
-                                 f'<b>{objective} (Observed)</b>: %{{y:.3f}}<br>' +
-                                 '<extra></extra>'
+                    hovertemplate='%{customdata}<extra></extra>',
+                    customdata=sampled_hover_templates
                 ))
             
             # 更新布局
@@ -1067,6 +1138,59 @@ class ParameterOptimizationAnalysis:
                 width=800
             )
             return fig
+    
+    def _create_slice_hover_template(self, param: str, objective: str, status_quo: pd.Series, other_params: List[str]) -> str:
+        """
+        为slice图创建hover模板，显示所有参数的当前值
+        
+        Args:
+            param: 当前分析的自变量参数
+            objective: 目标变量
+            status_quo: 其他参数的固定值（中位数/众数）
+            other_params: 其他参数列表
+            
+        Returns:
+            hover模板字符串
+        """
+        hover_template = '<b>Current Parameter State:</b><br>'
+        
+        # 添加其他参数的固定值
+        for other_param in other_params:
+            if other_param in status_quo:
+                value = status_quo[other_param]
+                if pd.api.types.is_numeric_dtype(type(value)) and not isinstance(value, bool):
+                    hover_template += f'  {other_param}: {value:.3f}<br>'
+                else:
+                    hover_template += f'  {other_param}: {value}<br>'
+        
+        return hover_template
+    
+    def _create_contour_hover_template(self, param1: str, param2: str, objective: str, status_quo: pd.Series, other_params: List[str]) -> str:
+        """
+        为等高线图创建hover模板，显示所有参数的当前值
+        
+        Args:
+            param1: 第一个自变量参数
+            param2: 第二个自变量参数
+            objective: 目标变量
+            status_quo: 其他参数的固定值（中位数/众数）
+            other_params: 其他参数列表
+            
+        Returns:
+            hover模板字符串
+        """
+        hover_template = '<b>Current Parameter State:</b><br>'
+        
+        # 添加其他参数的固定值
+        for other_param in other_params:
+            if other_param in status_quo:
+                value = status_quo[other_param]
+                if pd.api.types.is_numeric_dtype(type(value)) and not isinstance(value, bool):
+                    hover_template += f'  {other_param}: {value:.3f}<br>'
+                else:
+                    hover_template += f'  {other_param}: {value}<br>'
+        
+        return hover_template
     
     def _rebuild_ax_optimizer(
         self,
@@ -1741,6 +1865,29 @@ class ParameterOptimizationAnalysis:
             print(f"💾 保存图表: {filename}")
         
         return saved_files
+    
+    def save_single_plot(self, plot_name: str, fig: go.Figure, format: str = 'html') -> str:
+        """
+        立即保存单个图表
+        
+        Args:
+            plot_name: 图表名称
+            fig: 图表对象
+            format: 保存格式 ('html', 'png', 'jpg', 'svg')
+            
+        Returns:
+            保存的文件路径
+        """
+        filename = f"{plot_name}.{format}"
+        filepath = self.output_dir / filename
+        
+        if format == 'html':
+            fig.write_html(str(filepath))
+        else:
+            fig.write_image(str(filepath))
+        
+        
+        return str(filepath)
     
     def generate_feature_importance_analysis(
         self,

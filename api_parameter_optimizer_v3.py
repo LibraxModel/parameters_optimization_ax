@@ -88,6 +88,7 @@ class AnalysisResponse(BaseModel):
     generated_plots: List[str] = Field(..., description="生成的图表列表")
     output_directory: str = Field(..., description="输出目录路径")
     has_categorical_data: bool = Field(..., description="是否包含类别数据")
+    saved_plots: List[Dict[str, str]] = Field(default=[], description="已保存的图表信息列表，包含name、path、type字段")
 
 def convert_parameter_space_to_ax_format(parameter_space: List[ParameterSpace]) -> List[Dict[str, Any]]:
     """将参数空间转换为Ax格式"""
@@ -518,6 +519,7 @@ async def analyze_experiment_data(
             )
             
             generated_plots = []
+            saved_plots = []  # 存储已保存的图表信息
             
             # 生成并行坐标图
             print("📊 生成并行坐标图...")
@@ -525,6 +527,10 @@ async def analyze_experiment_data(
                 parameters=param_list,
                 objectives=objective_list
             )
+            # 立即保存并行坐标图
+            if "parallel_coords_combined" in analyzer.plots:
+                saved_path = analyzer.save_single_plot("parallel_coords_combined", analyzer.plots["parallel_coords_combined"])
+                saved_plots.append({"name": "parallel_coords_combined", "path": saved_path, "type": "parallel_coordinates"})
             generated_plots.append("parallel_coords_combined")
             
             # 生成特征重要性图
@@ -533,6 +539,12 @@ async def analyze_experiment_data(
                 parameters=param_list,
                 objectives=objective_list
             )
+            # 立即保存特征重要性图
+            for obj in objective_list:
+                plot_name = f"feature_importance_{obj}"
+                if plot_name in analyzer.plots:
+                    saved_path = analyzer.save_single_plot(plot_name, analyzer.plots[plot_name])
+                    saved_plots.append({"name": plot_name, "path": saved_path, "type": "feature_importance"})
             generated_plots.extend([f"feature_importance_{obj}" for obj in objective_list])
             
             # 生成交叉验证图
@@ -546,6 +558,12 @@ async def analyze_experiment_data(
                 kernel_class=kernel_cls,
                 kernel_options=kernel_options_dict
             )
+            # 立即保存交叉验证图
+            for obj in objective_list:
+                plot_name = f"cross_validation_{obj}"
+                if plot_name in analyzer.plots:
+                    saved_path = analyzer.save_single_plot(plot_name, analyzer.plots[plot_name])
+                    saved_plots.append({"name": plot_name, "path": saved_path, "type": "cross_validation"})
             generated_plots.extend([f"cross_validation_{obj}" for obj in objective_list])
             
             # 如果没有类别数据，生成额外的图表
@@ -559,6 +577,13 @@ async def analyze_experiment_data(
                     kernel_class=kernel_cls,
                     kernel_options=kernel_options_dict
                 )
+                # 立即保存切片图
+                for obj in objective_list:
+                    for param in param_list:
+                        plot_name = f"slice_{obj}_{param}"
+                        if plot_name in analyzer.plots:
+                            saved_path = analyzer.save_single_plot(plot_name, analyzer.plots[plot_name])
+                            saved_plots.append({"name": plot_name, "path": saved_path, "type": "slice"})
                 generated_plots.extend([f"slice_{obj}_{param}" for obj in objective_list for param in param_list])
                 
                 print("📊 生成等高线图...")
@@ -570,10 +595,16 @@ async def analyze_experiment_data(
                     kernel_class=kernel_cls,
                     kernel_options=kernel_options_dict
                 )
+                # 立即保存等高线图
+                for obj in objective_list:
+                    for param1 in param_list:
+                        for param2 in param_list:
+                            if param1 != param2:
+                                plot_name = f"contour_{obj}_{param1}_{param2}"
+                                if plot_name in analyzer.plots:
+                                    saved_path = analyzer.save_single_plot(plot_name, analyzer.plots[plot_name])
+                                    saved_plots.append({"name": plot_name, "path": saved_path, "type": "contour"})
                 generated_plots.extend([f"contour_{obj}_{param1}_{param2}" for obj in objective_list for param1 in param_list for param2 in param_list if param1 != param2])
-            
-            # 保存所有图表
-            analyzer.save_plots()
             
             # 构建响应消息
             plot_count = len(generated_plots)
@@ -599,7 +630,8 @@ async def analyze_experiment_data(
                 message=message,
                 generated_plots=generated_plots,
                 output_directory=output_dir,
-                has_categorical_data=has_categorical
+                has_categorical_data=has_categorical,
+                saved_plots=saved_plots
             )
             
         finally:
