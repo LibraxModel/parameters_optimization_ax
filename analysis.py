@@ -1118,7 +1118,11 @@ class ParameterOptimizationAnalysis:
                 if pd.isna(val) or val is None:
                     exp_params[param] = "None"
                 else:
-                    exp_params[param] = val
+                    # 确保数值类型参数转换为浮点数
+                    if pd.api.types.is_numeric_dtype(self.experiment_data[param]):
+                        exp_params[param] = float(val)
+                    else:
+                        exp_params[param] = val
             
             exp_metrics = {obj: row[obj] for obj in objectives}
             experiments.append(ExperimentResult(

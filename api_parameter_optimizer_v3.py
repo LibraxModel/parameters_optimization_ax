@@ -210,10 +210,13 @@ def convert_parameter_space_to_ax_format_for_analysis(parameter_space: List[Para
             # 为了兼容CSV数据中的numpy.float64类型，统一使用float类型
             value_type = "float"
             
+            # 确保bounds中的值也是浮点数类型
+            float_bounds = [float(val) for val in param.values]
+            
             search_space.append({
                 "name": param.name,
                 "type": "range",
-                "bounds": param.values,
+                "bounds": float_bounds,
                 "value_type": value_type
             })
     return search_space
