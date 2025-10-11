@@ -11,6 +11,7 @@
 - **自定义采集函数**: 支持单目标和多目标优化的各种采集函数
 - **先验数据支持**: 可以集成历史实验数据
 - **多目标优化**: 支持帕累托优化和权重优化
+- **实验数据分析**: 生成多种可视化图表（并行坐标图、特征重要性图、交叉验证图、切片图、等高线图）
 - **RESTful API**: 提供简洁的 HTTP 接口
 
 ## 📦 安装
@@ -163,20 +164,63 @@ print(response.json())
 - `acquisition_function_options`: 采集函数参数（可选）
 
 #### POST `/analysis`
-实验数据分析接口，生成可视化图表
+实验数据分析接口，生成基础可视化图表
 
 **请求参数:**
 - `file`: 实验数据CSV文件
 - `parameters`: 参数列名，用逗号分隔
 - `objectives`: 目标列名，用逗号分隔
-- `search_space`: 参数空间配置，JSON格式字符串
+- `parameter_space`: 参数空间配置，JSON格式字符串
 - `surrogate_model_class`: 代理模型类名（可选）
 - `kernel_class`: 核函数类名（可选）
 - `kernel_options`: 核函数参数，JSON格式字符串（可选）
 
-**图表生成规则:**
-- 有类别数据时：生成并行坐标图、特征重要性图、交叉验证图（3种）
-- 无类别数据时：生成并行坐标图、特征重要性图、交叉验证图、切片图、等高线图（5种）
+**生成图表:**
+- 并行坐标图（1个）
+- 特征重要性图（每个目标1个）
+- 交叉验证图（每个目标1个）
+
+#### POST `/analysis/slice`
+生成单个切片图，展示指定参数对指定目标的影响
+
+**请求参数:**
+- `file`: 实验数据CSV文件
+- `parameter`: 要分析的参数名称
+- `objective`: 要分析的目标名称
+- `parameter_space`: 参数空间配置，JSON格式字符串
+- `surrogate_model_class`: 代理模型类名（可选）
+- `kernel_class`: 核函数类名（可选）
+- `kernel_options`: 核函数参数，JSON格式字符串（可选）
+
+**返回:**
+- 单个切片图的查看链接
+- 只生成用户指定的参数图表
+
+#### POST `/analysis/contour`
+生成单个等高线图，展示指定参数对组合对指定目标的影响
+
+**请求参数:**
+- `file`: 实验数据CSV文件
+- `parameter1`: 第一个参数名称
+- `parameter2`: 第二个参数名称
+- `objective`: 要分析的目标名称
+- `parameter_space`: 参数空间配置，JSON格式字符串
+- `surrogate_model_class`: 代理模型类名（可选）
+- `kernel_class`: 核函数类名（可选）
+- `kernel_options`: 核函数参数，JSON格式字符串（可选）
+
+**返回:**
+- 单个等高线图的查看链接
+- 只生成用户指定的参数对图表
+
+#### GET `/chart/{file_id}`
+查看生成的图表（在浏览器中渲染）
+
+**参数:**
+- `file_id`: 图表文件ID（从分析接口返回）
+
+**返回:**
+- HTML格式的图表内容，可直接在浏览器中查看
 
 ## 🔧 可配置组件详解
 
@@ -200,8 +244,8 @@ print(response.json())
 |-----------|------|------|----------|
 | `RBFKernel` | 径向基函数核（高斯核） | `lengthscale` | 光滑函数，大多数工程问题 |
 | `MaternKernel` | Matérn 核 | `nu` (0.5, 1.5, 2.5) | 不同平滑度需求，工程优化常用 |
-| `LinearKernel` | 线性核 | `variance` | 线性或近似线性问题 |
-| `PolynomialKernel` | 多项式核 | `power`, `offset` | 多项式关系的问题 |
+| `LinearKernel` | 线性核 | `variance` (0.1,0.5,1.0,2.0) | 线性或近似线性问题 |
+| `PolynomialKernel` | 多项式核 | `power` (1,2,3,4) | 多项式关系的问题 |
 | `PeriodicKernel` | 周期核 | `period`, `lengthscale` | 具有周期性的优化问题 |
 | `SpectralMixtureKernel` | 谱混合核 | `num_mixtures` | 复杂的频域特征 |
 | `RQKernel` | 有理二次核 | `alpha`, `lengthscale` | 中等复杂度的平滑函数 |
@@ -397,6 +441,8 @@ print(response.json())
 
 ### 示例 4: 实验数据分析
 
+#### 基础分析（生成所有基础图表）
+
 ```python
 import requests
 import json
@@ -406,7 +452,7 @@ analysis_request = {
     'file': open('experiment_data.csv', 'rb'),
     'parameters': 'solvent,catalyst,temperature,concentration',
     'objectives': 'yield,side_product',
-    'search_space': json.dumps([
+    'parameter_space': json.dumps([
         {
             "name": "solvent",
             "type": "choice",
@@ -420,12 +466,12 @@ analysis_request = {
         {
             "name": "temperature",
             "type": "range",
-            "bounds": [10, 30]
+            "values": [-10, 40]
         },
         {
             "name": "concentration",
             "type": "range",
-            "bounds": [0.2, 1.0]
+            "values": [0.1, 1.0]
         }
     ]),
     'surrogate_model_class': 'SingleTaskGP',
@@ -441,8 +487,117 @@ response = requests.post('http://localhost:3320/analysis', files=files, data=dat
 result = response.json()
 
 print(f"分析结果: {result['message']}")
-print(f"输出目录: {result['output_directory']}")
 print(f"生成的图表: {result['generated_plots']}")
+print(f"查看链接: {result['view_links']}")
+```
+
+#### 生成单个切片图
+
+```python
+# 生成温度对产率的切片图
+slice_request = {
+    'file': open('experiment_data.csv', 'rb'),
+    'parameter': 'temperature',
+    'objective': 'yield',
+    'parameter_space': json.dumps([
+        {
+            "name": "solvent",
+            "type": "choice",
+            "values": ["THF", "Toluene", "DMSO"]
+        },
+        {
+            "name": "catalyst",
+            "type": "choice",
+            "values": ["Pd/C", "CuO", "None"]
+        },
+        {
+            "name": "temperature",
+            "type": "range",
+            "values": [-10, 40]
+        },
+        {
+            "name": "concentration",
+            "type": "range",
+            "values": [0.1, 1.0]
+        }
+    ]),
+    'surrogate_model_class': 'SingleTaskGP',
+    'kernel_class': 'MaternKernel',
+    'kernel_options': json.dumps({"nu": 2.5})
+}
+
+files = {'file': slice_request['file']}
+data = {k: v for k, v in slice_request.items() if k != 'file'}
+
+response = requests.post('http://localhost:3320/analysis/slice', files=files, data=data)
+result = response.json()
+
+print(f"切片图生成结果: {result['message']}")
+print(f"图表名称: {result['plot_name']}")
+print(f"查看链接: {result['view_link']['url']}")
+```
+
+#### 生成单个等高线图
+
+```python
+# 生成温度和浓度对产率的等高线图
+contour_request = {
+    'file': open('experiment_data.csv', 'rb'),
+    'parameter1': 'temperature',
+    'parameter2': 'concentration',
+    'objective': 'yield',
+    'parameter_space': json.dumps([
+        {
+            "name": "solvent",
+            "type": "choice",
+            "values": ["THF", "Toluene", "DMSO"]
+        },
+        {
+            "name": "catalyst",
+            "type": "choice",
+            "values": ["Pd/C", "CuO", "None"]
+        },
+        {
+            "name": "temperature",
+            "type": "range",
+            "values": [-10, 40]
+        },
+        {
+            "name": "concentration",
+            "type": "range",
+            "values": [0.1, 1.0]
+        }
+    ]),
+    'surrogate_model_class': 'SingleTaskGP',
+    'kernel_class': 'MaternKernel',
+    'kernel_options': json.dumps({"nu": 2.5})
+}
+
+files = {'file': contour_request['file']}
+data = {k: v for k, v in contour_request.items() if k != 'file'}
+
+response = requests.post('http://localhost:3320/analysis/contour', files=files, data=data)
+result = response.json()
+
+print(f"等高线图生成结果: {result['message']}")
+print(f"图表名称: {result['plot_name']}")
+print(f"查看链接: {result['view_link']['url']}")
+```
+
+#### 查看图表
+
+```python
+# 获取图表查看链接后，可以直接在浏览器中打开
+chart_url = f"http://localhost:3320{result['view_link']['url']}"
+print(f"在浏览器中打开: {chart_url}")
+
+# 或者使用requests获取图表内容
+response = requests.get(chart_url)
+if response.status_code == 200:
+    # 保存为HTML文件
+    with open('chart.html', 'w', encoding='utf-8') as f:
+        f.write(response.text)
+    print("图表已保存为 chart.html")
 ```
 
 ## 🔍 常用配置组合推荐
@@ -494,13 +649,60 @@ print(f"生成的图表: {result['generated_plots']}")
 }
 ```
 
+### 6. 实验数据分析（基础图表）
+```python
+{
+    "surrogate_model_class": "SingleTaskGP",
+    "kernel_class": "MaternKernel",
+    "kernel_options": {"nu": 2.5}
+}
+```
+
+### 7. 切片图和等高线图生成
+```python
+{
+    "surrogate_model_class": "SingleTaskGP",
+    "kernel_class": "RBFKernel"
+}
+```
+
 ## 📊 性能优化建议
 
+### 贝叶斯优化配置
 1. **数据量较少时** (< 20 个实验): 使用 `MaternKernel` 和 `qExpectedImprovement`
 2. **数据量中等时** (20-100 个实验): 使用 `RBFKernel` 和 `qNoisyExpectedImprovement`
 3. **数据量较大时** (> 100 个实验): 使用 `SingleTaskVariationalGP` 和 `qLogExpectedImprovement`
 4. **高维问题** (> 10 个参数): 使用 `SaasFullyBayesianSingleTaskGP`
 5. **多目标优化**: 优先使用 `qLogExpectedHypervolumeImprovement`
+
+### 图表生成优化
+1. **切片图生成**: 只生成需要的参数，避免不必要的计算
+2. **等高线图生成**: 使用 `RBFKernel` 获得更平滑的等高线
+3. **交叉验证图**: 包含详细hover信息，便于分析模型表现
+4. **参数类型判断**: 基于参数空间配置而非数据统计，更准确
+5. **图表查看**: 使用 `/chart/{file_id}` 接口直接查看HTML图表
+
+### 服务器配置
+1. **单进程模式**: 开发测试时使用 `python api_parameter_optimizer_v3.py`
+2. **多进程模式**: 生产环境使用 `uvicorn api_parameter_optimizer_v3:app --host 0.0.0.0 --port 3320 --workers 4`
+3. **内存优化**: 大量图表生成时注意清理临时文件
+
+## 🆕 新功能特性
+
+### 细粒度图表生成
+- **按需生成**: 只生成用户指定的图表，提高效率
+- **参数精确控制**: 基于参数空间配置判断参数类型，更准确
+- **独立接口**: 切片图和等高线图有独立的API接口
+
+### 增强的交互体验
+- **详细hover信息**: 交叉验证图显示每个点的完整参数信息
+- **直接查看**: 图表可直接在浏览器中查看，无需下载
+- **实时生成**: 图表按需生成，减少存储空间
+
+### 智能参数处理
+- **类型智能判断**: 基于参数空间配置而非数据统计
+- **中位数/众数固定**: 切片图中其他参数使用统计值固定
+- **缓存优化**: Ax优化器缓存机制，避免重复重建
 
 ## 🤝 贡献
 

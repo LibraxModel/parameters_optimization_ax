@@ -68,6 +68,9 @@ class ParameterOptimizationAnalysis:
         self.analysis_results = {}
         self.plots = {}
         
+        # 添加Ax优化器缓存，避免重复重建
+        self._ax_optimizer_cache = {}
+        
     def load_experiment_data(self, file_path: str) -> pd.DataFrame:
         """
         加载实验数据
@@ -466,18 +469,24 @@ class ParameterOptimizationAnalysis:
         # 新增：自定义代理模型配置参数
         surrogate_model_class: Optional[Type] = None,
         kernel_class: Optional[Type] = None,
-        kernel_options: Optional[Dict[str, Any]] = None
+        kernel_options: Optional[Dict[str, Any]] = None,
+        # 新增：指定要生成的参数列表（如果为None，则生成所有range参数的图表）
+        target_parameters: Optional[List[str]] = None,
+        # 新增：指定要生成的目标列表（如果为None，则生成所有目标的图表）
+        target_objectives: Optional[List[str]] = None
     ) -> Dict[str, go.Figure]:
         """
         创建slice图，展示单一参数对目标的影响及置信区间
         基于Ax的SlicePlot实现，当且仅当所有参数都是range类型时生成
         
         Args:
-            parameters: 参数列表
+            parameters: 参数列表（用于构建优化器，应包含所有参数）
             objectives: 目标指标列表
             search_space: 搜索空间配置（必须提供）
             n_points: 预测点的数量
             confidence_level: 置信区间水平
+            target_parameters: 指定要生成的参数列表（如果为None，则生成所有range参数的图表）
+            target_objectives: 指定要生成的目标列表（如果为None，则生成所有目标的图表）
             
         Returns:
             切片图字典
@@ -494,47 +503,9 @@ class ParameterOptimizationAnalysis:
         # 获取参数类型信息
         param_types = self.get_parameter_types()
         
-        # 检查是否所有参数都是range类型（排除类别参数）
-        range_params = []
-        categorical_params = []
-        discrete_numeric_params = []
-        
-        for param in parameters:
-            param_data = self.experiment_data[param]
-            if pd.api.types.is_numeric_dtype(param_data):
-                # 检查是否为连续数值变量
-                unique_values = sorted(param_data.unique())
-                if len(unique_values) > 10:  # 如果唯一值数量多，认为是range类型
-                    range_params.append(param)
-                else:
-                    discrete_numeric_params.append(param)
-                    print(f"  ⚠️ 参数 '{param}' 是离散数值类型（唯一值数量: {len(unique_values)}）")
-            else:
-                categorical_params.append(param)
-                print(f"  ⚠️ 参数 '{param}' 是类别类型")
-        
-        # 检查是否有类别参数
-        if categorical_params:
-            print(f"❌ 发现类别参数: {categorical_params}")
-            print("❌ 包含类别参数的实验不生成slice图")
-            return {}
-        
-        # 检查是否有离散数值参数
-        if discrete_numeric_params:
-            print(f"❌ 发现离散数值参数: {discrete_numeric_params}")
-            print("❌ 包含离散数值参数的实验不生成slice图")
-            return {}
-        
-        # 只有当所有参数都是连续range类型时才生成slice图
-        if not range_params:
-            print("❌ 没有找到连续range类型的参数，无法生成slice图")
-            return {}
-        
-        if not range_params:
-            print("❌ 没有找到range类型的参数，无法生成slice图")
-            return {}
-        
-        print(f"✅ 所有参数都是range类型: {range_params}")
+        # 使用convert_parameter_space_to_ax_format_for_analysis函数分析参数类型
+        # 这里我们不需要全局检查所有参数，只需要检查用户指定的参数
+        print("🔍 分析参数类型...")
         
         # 重建Ax优化器和代理模型
         print("🔧 重建Ax优化器和代理模型...")
@@ -550,12 +521,70 @@ class ParameterOptimizationAnalysis:
         
         plots = {}
         
+        # 确定要生成的参数列表
+        if target_parameters is not None:
+            # 只生成用户指定的参数图表
+            # 首先检查用户指定的参数是否在数据中存在
+            valid_target_params = [param for param in target_parameters if param in self.experiment_data.columns]
+            if not valid_target_params:
+                print(f"❌ 指定的参数 {target_parameters} 在数据中不存在")
+                return {}
+            
+            # 使用参数空间配置来判断参数类型
+            params_to_generate = []
+            for param in valid_target_params:
+                # 在search_space中查找参数配置
+                param_config = None
+                for config in search_space:
+                    if config["name"] == param:
+                        param_config = config
+                        break
+                
+                if param_config is None:
+                    print(f"⚠️ 参数 '{param}' 在参数空间配置中未找到，跳过")
+                    continue
+                
+                # 根据参数空间配置判断类型
+                if param_config["type"] == "range":
+                    params_to_generate.append(param)
+                    print(f"✅ 参数 '{param}' 是range类型，可以生成slice图")
+                elif param_config["type"] == "choice":
+                    print(f"⚠️ 参数 '{param}' 是choice类型，无法生成slice图")
+                else:
+                    print(f"⚠️ 参数 '{param}' 类型未知: {param_config['type']}，无法生成slice图")
+            
+            if not params_to_generate:
+                print(f"❌ 指定的参数 {target_parameters} 中没有适合生成slice图的range类型参数")
+                return {}
+        else:
+            # 生成所有range参数的图表（原有行为）
+            # 从search_space中筛选range类型参数
+            params_to_generate = []
+            for config in search_space:
+                if config["type"] == "range":
+                    params_to_generate.append(config["name"])
+            
+            if not params_to_generate:
+                print("❌ 参数空间中没有range类型的参数，无法生成slice图")
+                return {}
+        
+        # 确定要生成的目标列表
+        if target_objectives is not None:
+            # 只生成用户指定的目标图表
+            objectives_to_generate = [obj for obj in target_objectives if obj in objectives]
+            if not objectives_to_generate:
+                print(f"❌ 指定的目标 {target_objectives} 中没有有效目标")
+                return {}
+        else:
+            # 生成所有目标的图表（原有行为）
+            objectives_to_generate = objectives
+        
         # 为每个目标创建slice图
-        for objective in objectives:
+        for objective in objectives_to_generate:
             print(f"📊 为目标 '{objective}' 生成slice图...")
             
-            # 只为range参数创建slice图
-            for param in range_params:
+            # 只为指定的range参数创建slice图
+            for param in params_to_generate:
                 print(f"  📈 生成参数 '{param}' 的slice图...")
                 
                 slice_fig = self._create_single_slice_plot_with_ax(
@@ -582,23 +611,30 @@ class ParameterOptimizationAnalysis:
         parameters: List[str],
         objectives: List[str],
         search_space: List[Dict[str, Any]],
-        n_points: int = 50,
+        n_points: int = 50,  
         confidence_level: float = 0.95,
+        max_contour_pairs: int = None,  # 不限制等高线图数量
         # 新增：自定义代理模型配置参数
         surrogate_model_class: Optional[Type] = None,
         kernel_class: Optional[Type] = None,
-        kernel_options: Optional[Dict[str, Any]] = None
+        kernel_options: Optional[Dict[str, Any]] = None,
+        # 新增：指定要生成的参数对列表（如果为None，则生成所有参数对的图表）
+        target_parameter_pairs: Optional[List[Tuple[str, str]]] = None,
+        # 新增：指定要生成的目标列表（如果为None，则生成所有目标的图表）
+        target_objectives: Optional[List[str]] = None
     ) -> Dict[str, go.Figure]:
         """
         创建等高线图，展示两个参数对目标的影响
         基于Ax的ContourPlot实现，当且仅当所有参数都是range类型时生成
         
         Args:
-            parameters: 参数列表（需要至少2个参数）
+            parameters: 参数列表（用于构建优化器，应包含所有参数）
             objectives: 目标指标列表
             search_space: 搜索空间配置（必须提供）
             n_points: 网格密度（n_points x n_points）
             confidence_level: 置信区间水平
+            target_parameter_pairs: 指定要生成的参数对列表（如果为None，则生成所有参数对的图表）
+            target_objectives: 指定要生成的目标列表（如果为None，则生成所有目标的图表）
             
         Returns:
             等高线图字典
@@ -620,42 +656,16 @@ class ParameterOptimizationAnalysis:
         # 获取参数类型信息
         param_types = self.get_parameter_types()
         
-        # 检查是否所有参数都是range类型
+        # 使用参数空间配置来分析参数类型
+        print("🔍 分析参数类型...")
+        
+        # 从search_space中筛选range类型参数
         range_params = []
-        categorical_params = []
-        discrete_numeric_params = []
+        for config in search_space:
+            if config["type"] == "range":
+                range_params.append(config["name"])
         
-        for param in parameters:
-            param_data = self.experiment_data[param]
-            if pd.api.types.is_numeric_dtype(param_data):
-                unique_values = sorted(param_data.unique())
-                if len(unique_values) > 10:
-                    range_params.append(param)
-                else:
-                    discrete_numeric_params.append(param)
-                    print(f"  ⚠️ 参数 '{param}' 是离散数值类型（唯一值数量: {len(unique_values)}）")
-            else:
-                categorical_params.append(param)
-                print(f"  ⚠️ 参数 '{param}' 是类别类型")
-        
-        # 检查是否有类别参数
-        if categorical_params:
-            print(f"❌ 发现类别参数: {categorical_params}")
-            print("❌ 包含类别参数的实验不生成等高线图")
-            return {}
-        
-        # 检查是否有离散数值参数
-        if discrete_numeric_params:
-            print(f"❌ 发现离散数值参数: {discrete_numeric_params}")
-            print("❌ 包含离散数值参数的实验不生成等高线图")
-            return {}
-        
-        # 只有当所有参数都是连续range类型时才生成等高线图
-        if len(range_params) < 2:
-            print("❌ 没有足够的连续range类型参数，无法生成等高线图")
-            return {}
-        
-        print(f"✅ 所有参数都是range类型: {range_params}")
+        print(f"📊 参数空间中的range类型参数: {range_params}")
         
         # 重建Ax优化器和代理模型
         print("🔧 重建Ax优化器和代理模型...")
@@ -671,18 +681,82 @@ class ParameterOptimizationAnalysis:
         
         plots = {}
         
+        # 确定要生成的目标列表
+        if target_objectives is not None:
+            # 只生成用户指定的目标图表
+            objectives_to_generate = [obj for obj in target_objectives if obj in objectives]
+            if not objectives_to_generate:
+                print(f"❌ 指定的目标 {target_objectives} 中没有有效目标")
+                return {}
+        else:
+            # 生成所有目标的图表（原有行为）
+            objectives_to_generate = objectives
+        
         # 为每个目标创建等高线图
-        for objective in objectives:
+        for objective in objectives_to_generate:
             print(f"📊 为目标 '{objective}' 生成等高线图...")
             
-            # 为每对range参数创建等高线图
-            for i in range(len(range_params)):
-                for j in range(i + 1, len(range_params)):
-                    param1 = range_params[i]
-                    param2 = range_params[j]
+            # 确定要生成的参数对列表
+            if target_parameter_pairs is not None:
+                # 只生成用户指定的参数对图表
+                param_pairs = []
+                for param1, param2 in target_parameter_pairs:
+                    # 检查参数是否在数据中存在
+                    if param1 not in self.experiment_data.columns:
+                        print(f"⚠️ 参数 '{param1}' 在数据中不存在，跳过参数对 ({param1}, {param2})")
+                        continue
+                    if param2 not in self.experiment_data.columns:
+                        print(f"⚠️ 参数 '{param2}' 在数据中不存在，跳过参数对 ({param1}, {param2})")
+                        continue
                     
-                    print(f"  📈 生成参数 '{param1}' vs '{param2}' 的等高线图...")
+                    # 使用参数空间配置检查参数类型
+                    param1_config = None
+                    param2_config = None
                     
+                    for config in search_space:
+                        if config["name"] == param1:
+                            param1_config = config
+                        if config["name"] == param2:
+                            param2_config = config
+                    
+                    if param1_config is None:
+                        print(f"⚠️ 参数 '{param1}' 在参数空间配置中未找到，跳过参数对 ({param1}, {param2})")
+                        continue
+                    if param2_config is None:
+                        print(f"⚠️ 参数 '{param2}' 在参数空间配置中未找到，跳过参数对 ({param1}, {param2})")
+                        continue
+                    
+                    # 检查参数是否为range类型
+                    if param1_config["type"] == "range" and param2_config["type"] == "range":
+                        param_pairs.append((param1, param2))
+                        print(f"✅ 参数对 ({param1}, {param2}) 都是range类型，可以生成等高线图")
+                    else:
+                        print(f"⚠️ 参数对 ({param1}, {param2}) 中至少有一个不是range类型，跳过")
+                        if param1_config["type"] != "range":
+                            print(f"   参数 '{param1}' 是 {param1_config['type']} 类型")
+                        if param2_config["type"] != "range":
+                            print(f"   参数 '{param2}' 是 {param2_config['type']} 类型")
+                
+                if not param_pairs:
+                    print(f"❌ 指定的参数对 {target_parameter_pairs} 中没有有效的range类型参数对")
+                    return {}
+            else:
+                # 计算所有可能的参数对（原有行为）
+                param_pairs = []
+                for i in range(len(range_params)):
+                    for j in range(i + 1, len(range_params)):
+                        param_pairs.append((range_params[i], range_params[j]))
+                
+                # 限制参数对数量（如果设置了限制）
+                if max_contour_pairs is not None and len(param_pairs) > max_contour_pairs:
+                    print(f"⚠️  参数对数量 ({len(param_pairs)}) 超过限制 ({max_contour_pairs})，只生成前 {max_contour_pairs} 个")
+                    param_pairs = param_pairs[:max_contour_pairs]
+            
+            # 为选定的参数对创建等高线图
+            for idx, (param1, param2) in enumerate(param_pairs, 1):
+                print(f"  📈 生成参数 '{param1}' vs '{param2}' 的等高线图... ({idx}/{len(param_pairs)})")
+                
+                try:
                     contour_fig = self._create_single_contour_plot_with_ax(
                         ax_optimizer=ax_optimizer,
                         param1=param1,
@@ -696,9 +770,11 @@ class ParameterOptimizationAnalysis:
                     plot_key = f"contour_{objective}_{param1}_{param2}"
                     plots[plot_key] = contour_fig
                     self.plots[plot_key] = contour_fig
+                    print(f"    ✅ 完成: {plot_key}")
                     
-                    # 立即保存当前生成的等高线图
-                    saved_path = self.save_single_plot(plot_key, contour_fig)
+                except Exception as e:
+                    print(f"    ❌ 失败: {param1} vs {param2} - {str(e)}")
+                    continue
                     
         
         return plots
@@ -1203,7 +1279,7 @@ class ParameterOptimizationAnalysis:
         kernel_options: Optional[Dict[str, Any]] = None
     ) -> BayesianOptimizer:
         """
-        基于实验数据重建Ax优化器
+        基于实验数据重建Ax优化器（带缓存）
         
         Args:
             parameters: 参数列表
@@ -1216,6 +1292,22 @@ class ParameterOptimizationAnalysis:
         Returns:
             重建的Ax优化器实例
         """
+        # 创建缓存键
+        cache_key = (
+            tuple(sorted(parameters)),
+            tuple(sorted(objectives)),
+            str(search_space),
+            surrogate_model_class,
+            kernel_class,
+            str(kernel_options) if kernel_options else None
+        )
+        
+        # 检查缓存
+        if cache_key in self._ax_optimizer_cache:
+            print(f"🔄 使用缓存的Ax优化器 (参数: {len(parameters)}, 目标: {len(objectives)})")
+            return self._ax_optimizer_cache[cache_key]
+        
+        print(f"🔧 重建Ax优化器 (参数: {len(parameters)}, 目标: {len(objectives)})")
         # 从数据推断优化配置（用于创建实验，不影响预测）
         optimization_config = self._infer_optimization_config(objectives)
         
@@ -1256,6 +1348,9 @@ class ParameterOptimizationAnalysis:
         
         # 添加先验实验数据
         optimizer.add_prior_experiments(experiments)
+        
+        # 缓存优化器
+        self._ax_optimizer_cache[cache_key] = optimizer
         
         return optimizer
     
@@ -1358,6 +1453,20 @@ class ParameterOptimizationAnalysis:
             # 创建交叉验证图
             fig = go.Figure()
             
+            # 准备详细的hover信息
+            hover_texts = []
+            for detail in cv_results['point_details']:
+                hover_text = f"<b>Point {detail['point_id']}</b><br>"
+                hover_text += f"<b>Observed {objective}:</b> {detail['observed']:.3f}<br>"
+                hover_text += f"<b>Predicted {objective}:</b> {detail['predicted']:.3f} ± {detail['ci']:.3f}<br>"
+                hover_text += "<b>Parameters:</b><br>"
+                for param, value in detail['parameters'].items():
+                    if isinstance(value, float):
+                        hover_text += f"  {param}: {value:.3f}<br>"
+                    else:
+                        hover_text += f"  {param}: {value}<br>"
+                hover_texts.append(hover_text)
+            
             # 添加散点图，只有垂直误差棒（预测值的置信区间）
             fig.add_trace(go.Scatter(
                 x=cv_results['observed'],
@@ -1377,13 +1486,8 @@ class ParameterOptimizationAnalysis:
                     width=3
                 ),
                 name='Cross Validation Points',
-                hovertemplate=(
-                    '<b>Point: %{text}</b><br>' +
-                    f'<b>Predicted:</b> %{{y:.6f}} ± %{{error_y.array:.6f}}<br>' +
-                    f'<b>Observed:</b> %{{x:.6f}}<br>' +
-                    '<extra></extra>'
-                ),
-                text=cv_results['point_names']
+                hovertemplate='%{hovertext}<extra></extra>',
+                hovertext=hover_texts
             ))
             
             # 添加对角线（完美预测线）
@@ -1502,6 +1606,7 @@ class ParameterOptimizationAnalysis:
             predicted_values = []
             predicted_cis = []
             point_names = []
+            point_details = []  # 存储每个点的详细参数信息
             
             print(f"      🔄 执行留一法交叉验证，共 {n_samples} 个样本...")
             
@@ -1524,10 +1629,25 @@ class ParameterOptimizationAnalysis:
                     )
                     
                     if prediction_result is not None:
+                        # 收集当前点的详细参数信息
+                        point_detail = {
+                            'point_id': i + 1,
+                            'observed': actual_value,
+                            'predicted': prediction_result['predicted'],
+                            'ci': prediction_result['ci'],
+                            'parameters': {}
+                        }
+                        
+                        # 添加所有参数的值
+                        for param in parameters:
+                            if param in trials_df.columns:
+                                point_detail['parameters'][param] = trials_df.iloc[i][param]
+                        
                         observed_values.append(actual_value)
                         predicted_values.append(prediction_result['predicted'])
                         predicted_cis.append(prediction_result['ci'])
                         point_names.append(point_name)
+                        point_details.append(point_detail)
                         
                         print(f"        ✅ 样本 {i+1}/{n_samples}: 观测值={actual_value:.3f}, 预测值={prediction_result['predicted']:.3f}±{prediction_result['ci']:.3f}")
                     
@@ -1545,7 +1665,8 @@ class ParameterOptimizationAnalysis:
                 'observed': np.array(observed_values),
                 'predicted': np.array(predicted_values),
                 'predicted_ci': np.array(predicted_cis),
-                'point_names': point_names
+                'point_names': point_names,
+                'point_details': point_details
             }
             
         except Exception as e:

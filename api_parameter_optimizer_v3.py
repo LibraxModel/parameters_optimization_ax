@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional, Union, Literal
 import uvicorn
@@ -6,6 +7,7 @@ import pandas as pd
 import tempfile
 import os
 import json
+import uuid
 from doe_init import generate_sobol_parameters, generate_lhs_parameters, generate_uniform_parameters
 from ax_optimizer import BayesianOptimizer, ExperimentResult
 from analysis import ParameterOptimizationAnalysis
@@ -16,6 +18,9 @@ app = FastAPI(
     description="支持先验实验数据的参数优化API，默认sobol采样，支持多种采样方式，新增贝叶斯优化支持",
     version="3.0.0"
 )
+
+# 存储图表文件映射的全局变量
+chart_files = {}
 
 
 
@@ -88,7 +93,31 @@ class AnalysisResponse(BaseModel):
     generated_plots: List[str] = Field(..., description="生成的图表列表")
     output_directory: str = Field(..., description="输出目录路径")
     has_categorical_data: bool = Field(..., description="是否包含类别数据")
-    saved_plots: List[Dict[str, str]] = Field(default=[], description="已保存的图表信息列表，包含name、path、type字段")
+    view_links: List[Dict[str, str]] = Field(default=[], description="图表查看链接列表，包含name、url、type字段")
+
+# 定义切片图请求模型
+class SliceAnalysisRequest(BaseModel):
+    parameter: str = Field(..., description="要分析的参数名称")
+    objective: str = Field(..., description="要分析的目标名称")
+    surrogate_model_class: Optional[str] = Field(None, description="代理模型类名")
+    kernel_class: Optional[str] = Field(None, description="核函数类名")
+    kernel_options: Optional[Dict[str, Any]] = Field(None, description="核函数参数")
+
+# 定义等高线图请求模型
+class ContourAnalysisRequest(BaseModel):
+    parameter1: str = Field(..., description="第一个参数名称")
+    parameter2: str = Field(..., description="第二个参数名称")
+    objective: str = Field(..., description="要分析的目标名称")
+    surrogate_model_class: Optional[str] = Field(None, description="代理模型类名")
+    kernel_class: Optional[str] = Field(None, description="核函数类名")
+    kernel_options: Optional[Dict[str, Any]] = Field(None, description="核函数参数")
+
+# 定义单个图表响应模型
+class SinglePlotResponse(BaseModel):
+    success: bool
+    message: str
+    plot_name: str = Field(..., description="生成的图表名称")
+    view_link: Dict[str, str] = Field(..., description="图表查看链接，包含name、url、type字段")
 
 def convert_parameter_space_to_ax_format(parameter_space: List[ParameterSpace]) -> List[Dict[str, Any]]:
     """将参数空间转换为Ax格式"""
@@ -292,7 +321,9 @@ async def root():
         "endpoints": {
             "POST /init": "初始化优化，支持传统采样",
             "POST /update": "贝叶斯优化接口，支持自定义代理模型、核函数和采集函数",
-            "POST /analysis": "实验数据分析接口，生成可视化图表",
+            "POST /analysis": "实验数据分析接口，生成并行坐标图、特征重要性图、交叉验证图",
+            "POST /analysis/slice": "生成单个切片图，用户指定参数和目标",
+            "POST /analysis/contour": "生成单个等高线图，用户指定参数对和目标",
             "GET /available_classes": "获取可用的代理模型、核函数和采集函数列表"
         }
     }
@@ -316,6 +347,24 @@ async def get_available_classes():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取可用类列表失败: {str(e)}")
+
+@app.get("/chart/{file_id}", response_class=HTMLResponse)
+async def view_chart(file_id: str):
+    """查看图表（在浏览器中渲染）"""
+    if file_id not in chart_files:
+        raise HTTPException(status_code=404, detail="图表不存在")
+    
+    file_path = chart_files[file_id]["path"]
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="图表文件已被删除")
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"读取图表文件失败: {str(e)}")
+
 
 
 
@@ -519,7 +568,7 @@ async def analyze_experiment_data(
             )
             
             generated_plots = []
-            saved_plots = []  # 存储已保存的图表信息
+            view_links = []  # 存储查看链接信息
             
             # 生成并行坐标图
             print("📊 生成并行坐标图...")
@@ -530,7 +579,25 @@ async def analyze_experiment_data(
             # 立即保存并行坐标图
             if "parallel_coords_combined" in analyzer.plots:
                 saved_path = analyzer.save_single_plot("parallel_coords_combined", analyzer.plots["parallel_coords_combined"])
-                saved_plots.append({"name": "parallel_coords_combined", "path": saved_path, "type": "parallel_coordinates"})
+                
+                # 生成唯一的文件ID
+                file_id = str(uuid.uuid4())
+                filename = f"parallel_coords_combined.html"
+                
+                # 存储文件映射
+                chart_files[file_id] = {
+                    "path": saved_path,
+                    "filename": filename,
+                    "type": "parallel_coordinates"
+                }
+                
+                # 添加查看链接
+                view_links.append({
+                    "name": "parallel_coords_combined",
+                    "url": f"/chart/{file_id}",
+                    "type": "parallel_coordinates"
+                })
+                
             generated_plots.append("parallel_coords_combined")
             
             # 生成特征重要性图
@@ -544,7 +611,25 @@ async def analyze_experiment_data(
                 plot_name = f"feature_importance_{obj}"
                 if plot_name in analyzer.plots:
                     saved_path = analyzer.save_single_plot(plot_name, analyzer.plots[plot_name])
-                    saved_plots.append({"name": plot_name, "path": saved_path, "type": "feature_importance"})
+                    
+                    # 生成唯一的文件ID
+                    file_id = str(uuid.uuid4())
+                    filename = f"{plot_name}.html"
+                    
+                    # 存储文件映射
+                    chart_files[file_id] = {
+                        "path": saved_path,
+                        "filename": filename,
+                        "type": "feature_importance"
+                    }
+                    
+                    # 添加查看链接
+                    view_links.append({
+                        "name": plot_name,
+                        "url": f"/chart/{file_id}",
+                        "type": "feature_importance"
+                    })
+                    
             generated_plots.extend([f"feature_importance_{obj}" for obj in objective_list])
             
             # 生成交叉验证图
@@ -563,59 +648,34 @@ async def analyze_experiment_data(
                 plot_name = f"cross_validation_{obj}"
                 if plot_name in analyzer.plots:
                     saved_path = analyzer.save_single_plot(plot_name, analyzer.plots[plot_name])
-                    saved_plots.append({"name": plot_name, "path": saved_path, "type": "cross_validation"})
+                    
+                    # 生成唯一的文件ID
+                    file_id = str(uuid.uuid4())
+                    filename = f"{plot_name}.html"
+                    
+                    # 存储文件映射
+                    chart_files[file_id] = {
+                        "path": saved_path,
+                        "filename": filename,
+                        "type": "cross_validation"
+                    }
+                    
+                    # 添加查看链接
+                    view_links.append({
+                        "name": plot_name,
+                        "url": f"/chart/{file_id}",
+                        "type": "cross_validation"
+                    })
+                    
             generated_plots.extend([f"cross_validation_{obj}" for obj in objective_list])
             
-            # 如果没有类别数据，生成额外的图表
-            if not has_categorical:
-                print("📊 生成切片图...")
-                slice_plots = analyzer.create_slice_plots(
-                    parameters=param_list,
-                    objectives=objective_list,
-                    search_space=search_space_dict,
-                    surrogate_model_class=surrogate_model_cls,
-                    kernel_class=kernel_cls,
-                    kernel_options=kernel_options_dict
-                )
-                # 立即保存切片图
-                for obj in objective_list:
-                    for param in param_list:
-                        plot_name = f"slice_{obj}_{param}"
-                        if plot_name in analyzer.plots:
-                            saved_path = analyzer.save_single_plot(plot_name, analyzer.plots[plot_name])
-                            saved_plots.append({"name": plot_name, "path": saved_path, "type": "slice"})
-                generated_plots.extend([f"slice_{obj}_{param}" for obj in objective_list for param in param_list])
-                
-                print("📊 生成等高线图...")
-                contour_plots = analyzer.create_contour_plots(
-                    parameters=param_list,
-                    objectives=objective_list,
-                    search_space=search_space_dict,
-                    surrogate_model_class=surrogate_model_cls,
-                    kernel_class=kernel_cls,
-                    kernel_options=kernel_options_dict
-                )
-                # 立即保存等高线图
-                for obj in objective_list:
-                    for param1 in param_list:
-                        for param2 in param_list:
-                            if param1 != param2:
-                                plot_name = f"contour_{obj}_{param1}_{param2}"
-                                if plot_name in analyzer.plots:
-                                    saved_path = analyzer.save_single_plot(plot_name, analyzer.plots[plot_name])
-                                    saved_plots.append({"name": plot_name, "path": saved_path, "type": "contour"})
-                generated_plots.extend([f"contour_{obj}_{param1}_{param2}" for obj in objective_list for param1 in param_list for param2 in param_list if param1 != param2])
+            # 注意：slice图和contour图已移至单独的接口
+            # 使用 /analysis/slice 接口生成单个切片图
+            # 使用 /analysis/contour 接口生成单个等高线图
             
             # 构建响应消息
             plot_count = len(generated_plots)
-            if has_categorical:
-                message = f"检测到类别数据，生成了3种类型共{plot_count}个图表：并行坐标图（1个）、特征重要性图（{len(objective_list)}个）、交叉验证图（{len(objective_list)}个）"
-            else:
-                # 计算非类别数据的图表数量
-                feature_plots = len(objective_list)  # 特征重要性图
-                cv_plots = len(objective_list)  # 交叉验证图
-                slice_plots = plot_count - 1 - feature_plots - cv_plots  # 减去并行坐标图、特征重要性图、交叉验证图
-                message = f"未检测到类别数据，生成了5种类型共{plot_count}个图表：并行坐标图（1个）、特征重要性图（{feature_plots}个）、交叉验证图（{cv_plots}个）、切片图和等高线图（{slice_plots}个）"
+            message = f"生成了3种类型共{plot_count}个图表：并行坐标图（1个）、特征重要性图（{len(objective_list)}个）、交叉验证图（{len(objective_list)}个）"
             
             if surrogate_model_class or kernel_class:
                 custom_components = []
@@ -631,7 +691,7 @@ async def analyze_experiment_data(
                 generated_plots=generated_plots,
                 output_directory=output_dir,
                 has_categorical_data=has_categorical,
-                saved_plots=saved_plots
+                view_links=view_links
             )
             
         finally:
@@ -642,7 +702,241 @@ async def analyze_experiment_data(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"分析失败: {str(e)}")
 
+@app.post("/analysis/slice", response_model=SinglePlotResponse)
+async def analyze_slice_plot(
+    file: UploadFile = File(..., description="实验数据CSV文件"),
+    parameter: str = Form(..., description="要分析的参数名称"),
+    objective: str = Form(..., description="要分析的目标名称"),
+    parameter_space: str = Form(..., description="参数空间配置，JSON格式字符串"),
+    surrogate_model_class: Optional[str] = Form(None, description="代理模型类名"),
+    kernel_class: Optional[str] = Form(None, description="核函数类名"),
+    kernel_options: Optional[str] = Form(None, description="核函数参数，JSON格式字符串")
+):
+    """生成单个切片图"""
+    try:
+        # 解析参数空间并转换为Ax格式
+        parameter_space_json = json.loads(parameter_space)
+        parameter_space_objects = [ParameterSpace(**param) for param in parameter_space_json]
+        search_space_dict = convert_parameter_space_to_ax_format_for_analysis(parameter_space_objects)
+        
+        # 解析核函数参数
+        kernel_options_dict = None
+        if kernel_options:
+            kernel_options_dict = json.loads(kernel_options)
+        
+        # 获取模型类
+        surrogate_model_cls = None
+        kernel_cls = None
+        if surrogate_model_class:
+            surrogate_model_cls = get_class_from_string(surrogate_model_class)
+        if kernel_class:
+            kernel_cls = get_class_from_string(kernel_class)
+        
+        # 保存上传的文件
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp_file:
+            content = await file.read()
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
+        
+        try:
+            # 创建输出目录
+            output_dir = f"analysis_output_{tempfile.mktemp()}"
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # 创建分析器
+            analyzer = ParameterOptimizationAnalysis(
+                experiment_file=tmp_file_path,
+                output_dir=output_dir
+            )
+            
+            # 生成单个切片图
+            print(f"📊 生成切片图: {parameter} vs {objective}")
+            # 传入完整的参数列表构建优化器，但只生成用户指定参数的切片图
+            all_parameters = [param["name"] for param in search_space_dict]
+            slice_plots = analyzer.create_slice_plots(
+                parameters=all_parameters,  # 传入所有参数，确保优化器有完整数据
+                objectives=[objective],
+                search_space=search_space_dict,
+                surrogate_model_class=surrogate_model_cls,
+                kernel_class=kernel_cls,
+                kernel_options=kernel_options_dict,
+                target_parameters=[parameter],  # 只生成用户指定参数的切片图
+                target_objectives=[objective]   # 只生成用户指定目标的切片图
+            )
+            
+            plot_name = f"slice_{objective}_{parameter}"
+            # 检查是否生成了用户指定的切片图
+            if plot_name in analyzer.plots:
+                # 保存图表
+                saved_path = analyzer.save_single_plot(plot_name, analyzer.plots[plot_name])
+                
+                # 生成唯一的文件ID
+                file_id = str(uuid.uuid4())
+                filename = f"{plot_name}.html"
+                
+                # 存储文件映射
+                chart_files[file_id] = {
+                    "path": saved_path,
+                    "filename": filename,
+                    "type": "slice"
+                }
+                
+                # 构建查看链接
+                view_link = {
+                    "name": plot_name,
+                    "url": f"/chart/{file_id}",
+                    "type": "slice"
+                }
+                
+                # 构建响应消息
+                message = f"成功生成切片图: {parameter} vs {objective}"
+                if surrogate_model_class or kernel_class:
+                    custom_components = []
+                    if surrogate_model_class:
+                        custom_components.append(f"代理模型:{surrogate_model_class}")
+                    if kernel_class:
+                        custom_components.append(f"核函数:{kernel_class}")
+                    message += f"，使用{'+'.join(custom_components)}"
+                
+                return SinglePlotResponse(
+                    success=True,
+                    message=message,
+                    plot_name=plot_name,
+                    view_link=view_link
+                )
+            else:
+                raise HTTPException(status_code=500, detail=f"切片图生成失败: {plot_name}")
+                
+        finally:
+            # 清理临时文件
+            if os.path.exists(tmp_file_path):
+                os.unlink(tmp_file_path)
+                
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"切片图分析失败: {str(e)}")
 
+@app.post("/analysis/contour", response_model=SinglePlotResponse)
+async def analyze_contour_plot(
+    file: UploadFile = File(..., description="实验数据CSV文件"),
+    parameter1: str = Form(..., description="第一个参数名称"),
+    parameter2: str = Form(..., description="第二个参数名称"),
+    objective: str = Form(..., description="要分析的目标名称"),
+    parameter_space: str = Form(..., description="参数空间配置，JSON格式字符串"),
+    surrogate_model_class: Optional[str] = Form(None, description="代理模型类名"),
+    kernel_class: Optional[str] = Form(None, description="核函数类名"),
+    kernel_options: Optional[str] = Form(None, description="核函数参数，JSON格式字符串")
+):
+    """生成单个等高线图"""
+    try:
+        # 验证参数
+        if parameter1 == parameter2:
+            raise HTTPException(status_code=400, detail="两个参数不能相同")
+        
+        # 解析参数空间并转换为Ax格式
+        parameter_space_json = json.loads(parameter_space)
+        parameter_space_objects = [ParameterSpace(**param) for param in parameter_space_json]
+        search_space_dict = convert_parameter_space_to_ax_format_for_analysis(parameter_space_objects)
+        
+        # 解析核函数参数
+        kernel_options_dict = None
+        if kernel_options:
+            kernel_options_dict = json.loads(kernel_options)
+        
+        # 获取模型类
+        surrogate_model_cls = None
+        kernel_cls = None
+        if surrogate_model_class:
+            surrogate_model_cls = get_class_from_string(surrogate_model_class)
+        if kernel_class:
+            kernel_cls = get_class_from_string(kernel_class)
+        
+        # 保存上传的文件
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp_file:
+            content = await file.read()
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
+        
+        try:
+            # 创建输出目录
+            output_dir = f"analysis_output_{tempfile.mktemp()}"
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # 创建分析器
+            analyzer = ParameterOptimizationAnalysis(
+                experiment_file=tmp_file_path,
+                output_dir=output_dir
+            )
+            
+            # 生成单个等高线图
+            print(f"📊 生成等高线图: {parameter1} vs {parameter2} for {objective}")
+            # 传入完整的参数列表构建优化器，但只生成用户指定参数对的等高线图
+            all_parameters = [param["name"] for param in search_space_dict]
+            contour_plots = analyzer.create_contour_plots(
+                parameters=all_parameters,  # 传入所有参数，确保优化器有完整数据
+                objectives=[objective],
+                search_space=search_space_dict,
+                surrogate_model_class=surrogate_model_cls,
+                kernel_class=kernel_cls,
+                kernel_options=kernel_options_dict,
+                target_parameter_pairs=[(parameter1, parameter2)],  # 只生成用户指定参数对的等高线图
+                target_objectives=[objective]  # 只生成用户指定目标的等高线图
+            )
+            
+            plot_name = f"contour_{objective}_{parameter1}_{parameter2}"
+            # 检查是否生成了用户指定的等高线图
+            if plot_name in analyzer.plots:
+                # 保存图表
+                saved_path = analyzer.save_single_plot(plot_name, analyzer.plots[plot_name])
+                
+                # 生成唯一的文件ID
+                file_id = str(uuid.uuid4())
+                filename = f"{plot_name}.html"
+                
+                # 存储文件映射
+                chart_files[file_id] = {
+                    "path": saved_path,
+                    "filename": filename,
+                    "type": "contour"
+                }
+                
+                # 构建查看链接
+                view_link = {
+                    "name": plot_name,
+                    "url": f"/chart/{file_id}",
+                    "type": "contour"
+                }
+                
+                # 构建响应消息
+                message = f"成功生成等高线图: {parameter1} vs {parameter2} for {objective}"
+                if surrogate_model_class or kernel_class:
+                    custom_components = []
+                    if surrogate_model_class:
+                        custom_components.append(f"代理模型:{surrogate_model_class}")
+                    if kernel_class:
+                        custom_components.append(f"核函数:{kernel_class}")
+                    message += f"，使用{'+'.join(custom_components)}"
+                
+                return SinglePlotResponse(
+                    success=True,
+                    message=message,
+                    plot_name=plot_name,
+                    view_link=view_link
+                )
+            else:
+                raise HTTPException(status_code=500, detail=f"等高线图生成失败: {plot_name}")
+                
+        finally:
+            # 清理临时文件
+            if os.path.exists(tmp_file_path):
+                os.unlink(tmp_file_path)
+                
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"等高线图分析失败: {str(e)}")
 
 if __name__ == "__main__":
+    # 单进程启动（用于开发测试）
+    # 生产环境建议使用命令行启动多进程：uvicorn api_parameter_optimizer_v3:app --host 0.0.0.0 --port 3320 --workers 4
+    print("🚀 启动API服务（单进程模式）")
+    print("💡 提示：生产环境建议使用以下命令启动多进程：")
+    print("   uvicorn api_parameter_optimizer_v3:app --host 0.0.0.0 --port 3320 --workers 4")
     uvicorn.run(app, host="0.0.0.0", port=3320)
