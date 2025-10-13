@@ -125,6 +125,15 @@ class BayesianOptimizer:
             kernel_cls = kernel_class or None
             kernel_opts = kernel_options or {}
             
+            # 特殊处理ScaleKernel的base_kernel配置
+            if kernel_cls is not None and hasattr(kernel_cls, '__name__') and kernel_cls.__name__ == 'ScaleKernel':
+                if 'base_kernel' in kernel_opts and isinstance(kernel_opts['base_kernel'], str):
+                    # 将base_kernel字符串转换为实际的核函数类
+                    base_kernel_class = convert_string_to_class(kernel_opts['base_kernel'])
+                    # 创建核函数实例而不是类
+                    base_kernel_instance = base_kernel_class()
+                    kernel_opts['base_kernel'] = base_kernel_instance
+            
             # 创建模型配置
             model_config = ModelConfig(
                 botorch_model_class=model_class,

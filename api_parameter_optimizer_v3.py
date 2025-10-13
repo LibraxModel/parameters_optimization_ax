@@ -764,7 +764,8 @@ async def analyze_slice_plot(
                 target_objectives=[objective]   # 只生成用户指定目标的切片图
             )
             
-            plot_name = f"slice_{objective}_{parameter}"
+            # 使用JSON数组格式命名：slice_["目标","参数"]
+            plot_name = f'slice_["{objective}","{parameter}"]'
             # 检查是否生成了用户指定的切片图
             if plot_name in analyzer.plots:
                 # 保存图表
@@ -882,7 +883,8 @@ async def analyze_contour_plot(
                 target_objectives=[objective]  # 只生成用户指定目标的等高线图
             )
             
-            plot_name = f"contour_{objective}_{parameter1}_{parameter2}"
+            # 使用JSON数组格式命名：contour_["目标","参数1","参数2"]
+            plot_name = f'contour_["{objective}","{parameter1}","{parameter2}"]'
             # 检查是否生成了用户指定的等高线图
             if plot_name in analyzer.plots:
                 # 保存图表

@@ -596,7 +596,8 @@ class ParameterOptimizationAnalysis:
                     confidence_level=confidence_level
                 )
                 
-                plot_key = f"slice_{objective}_{param}"
+                # 使用JSON数组格式命名：slice_["目标","参数"]
+                plot_key = f'slice_["{objective}","{param}"]'
                 plots[plot_key] = slice_fig
                 self.plots[plot_key] = slice_fig
                 
@@ -767,7 +768,8 @@ class ParameterOptimizationAnalysis:
                         confidence_level=confidence_level
                     )
                     
-                    plot_key = f"contour_{objective}_{param1}_{param2}"
+                    # 使用JSON数组格式命名：contour_["目标","参数1","参数2"]
+                    plot_key = f'contour_["{objective}","{param1}","{param2}"]'
                     plots[plot_key] = contour_fig
                     self.plots[plot_key] = contour_fig
                     print(f"    ✅ 完成: {plot_key}")
@@ -1045,6 +1047,9 @@ class ParameterOptimizationAnalysis:
                         
                 except Exception as e:
                     print(f"      ⚠️ 预测失败，参数值={param_val}，错误: {e}")
+                    print(f"      🔍 错误详情: {type(e).__name__}: {str(e)}")
+                    import traceback
+                    print(f"      📋 错误堆栈: {traceback.format_exc()}")
                     predictions.append(0.0)
                     confidence_intervals.append([0.0, 0.0])
                     sampled_mask.append(False)
@@ -1197,6 +1202,9 @@ class ParameterOptimizationAnalysis:
             
         except Exception as e:
             print(f"    ❌ 使用Ax模型创建slice图失败: {e}")
+            print(f"    🔍 错误详情: {type(e).__name__}: {str(e)}")
+            import traceback
+            print(f"    📋 错误堆栈: {traceback.format_exc()}")
             # 如果Ax模型失败，返回错误图表
             fig = go.Figure()
             fig.add_annotation(

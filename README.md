@@ -250,7 +250,7 @@ print(response.json())
 | `SpectralMixtureKernel` | 谱混合核 | `num_mixtures` | 复杂的频域特征 |
 | `RQKernel` | 有理二次核 | `alpha`, `lengthscale` | 中等复杂度的平滑函数 |
 | `CosineKernel` | 余弦核 | `period` | 余弦型周期模式 |
-| `ScaleKernel` | 缩放核 | `base_kernel`, `outputscale` | 需要调整输出尺度的情况 |
+| `ScaleKernel` | 缩放核 | `base_kernel` (字符串), `outputscale` | 需要调整输出尺度的情况 |
 | `AdditiveKernel` | 加性核 | `kern1`, `kern2` | 需要组合不同类型相关性 |
 | `ProductKernel` | 乘积核 | `kern1`, `kern2` | 需要核函数乘积的场景 |
 
@@ -402,7 +402,81 @@ response = requests.post("http://localhost:3320/update", json=reaction_optimizat
 print(response.json())
 ```
 
-### 示例 3: 高探索性配置
+### 示例 3: ScaleKernel配置
+
+```python
+# ScaleKernel配置（包装其他核函数）
+scale_kernel_config = {
+    "parameter_space": [
+        {
+            "name": "solvent",
+            "type": "choice",
+            "values": ["THF", "Toluene", "DMSO"]
+        },
+        {
+            "name": "catalyst",
+            "type": "choice", 
+            "values": ["Pd/C", "CuO", "None"]
+        },
+        {
+            "name": "temperature",
+            "type": "range",
+            "values": [-10, 25]
+        },
+        {
+            "name": "concentration",
+            "type": "range",
+            "values": [0.1, 1.0],
+            "step": 0.1
+        }
+    ],
+    "objectives": {
+        "yield": {"minimize": false},
+        "side_product": {"minimize": false}
+    },
+    "completed_experiments": [
+        {
+            "parameters": {
+                "solvent": "THF",
+                "catalyst": "Pd/C",
+                "temperature": -10,
+                "concentration": 0.1
+            },
+            "metrics": {
+                "yield": 72,
+                "side_product": 5
+            }
+        },
+        {
+            "parameters": {
+                "solvent": "Toluene",
+                "catalyst": "CuO",
+                "temperature": 0,
+                "concentration": 0.2
+            },
+            "metrics": {
+                "yield": 85,
+                "side_product": 3
+            }
+        }
+    ],
+    "batch": 3,
+    "seed": 42,
+    "surrogate_model_class": "SingleTaskGP",
+    "kernel_class": "ScaleKernel",
+    "kernel_options": {
+        "base_kernel": "MaternKernel",  # 基础核函数（字符串）
+        "outputscale": 2.0              # 输出缩放因子
+    },
+    "acquisition_function_class": "qLogExpectedHypervolumeImprovement",
+    "acquisition_function_options": {}
+}
+
+response = requests.post("http://localhost:3320/update", json=scale_kernel_config)
+print(response.json())
+```
+
+### 示例 4: 高探索性配置
 
 ```python
 # 高探索性配置
@@ -663,6 +737,30 @@ if response.status_code == 200:
 {
     "surrogate_model_class": "SingleTaskGP",
     "kernel_class": "RBFKernel"
+}
+```
+
+### 8. ScaleKernel配置（包装其他核函数）
+```python
+{
+    "surrogate_model_class": "SingleTaskGP",
+    "kernel_class": "ScaleKernel",
+    "kernel_options": {
+        "base_kernel": "MaternKernel",  # 基础核函数
+        "outputscale": 2.0              # 输出缩放因子
+    }
+}
+```
+
+### 9. ScaleKernel + RBFKernel组合
+```python
+{
+    "surrogate_model_class": "SingleTaskGP",
+    "kernel_class": "ScaleKernel",
+    "kernel_options": {
+        "base_kernel": "RBFKernel",     # 基础核函数
+        "outputscale": 1.5              # 输出缩放
+    }
 }
 ```
 
