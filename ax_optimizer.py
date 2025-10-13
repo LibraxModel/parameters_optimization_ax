@@ -125,21 +125,51 @@ class BayesianOptimizer:
             kernel_cls = kernel_class or None
             kernel_opts = kernel_options or {}
             
-            # 特殊处理ScaleKernel的base_kernel配置
-            if kernel_cls is not None and hasattr(kernel_cls, '__name__') and kernel_cls.__name__ == 'ScaleKernel':
-                if 'base_kernel' in kernel_opts and isinstance(kernel_opts['base_kernel'], str):
-                    # 将base_kernel字符串转换为实际的核函数类
-                    base_kernel_class = convert_string_to_class(kernel_opts['base_kernel'])
-                    # 创建核函数实例而不是类
-                    base_kernel_instance = base_kernel_class()
-                    kernel_opts['base_kernel'] = base_kernel_instance
-            
-            # 创建模型配置
-            model_config = ModelConfig(
-                botorch_model_class=model_class,
-                covar_module_class=kernel_cls,
-                covar_module_options=kernel_opts,
-            )
+            # 特殊处理：某些模型不支持自定义 covar_module
+            if model_class is not None and hasattr(model_class, '__name__'):
+                model_name = model_class.__name__
+                
+                # 完全贝叶斯模型不支持自定义核函数
+                if model_name in ['SaasFullyBayesianSingleTaskGP', 'SaasFullyBayesianMultiTaskGP']:
+                    print(f"⚠️ 模型 {model_name} 不支持自定义核函数，将忽略 kernel_class 和 kernel_options 参数")
+                    # 对于完全贝叶斯模型，只使用模型类，不设置核函数
+                    model_config = ModelConfig(
+                        botorch_model_class=model_class,
+                    )
+                else:
+                    # 其他模型可以设置自定义核函数
+                    # 特殊处理ScaleKernel的base_kernel配置
+                    if kernel_cls is not None and hasattr(kernel_cls, '__name__') and kernel_cls.__name__ == 'ScaleKernel':
+                        if 'base_kernel' in kernel_opts and isinstance(kernel_opts['base_kernel'], str):
+                            # 将base_kernel字符串转换为实际的核函数类
+                            base_kernel_class = convert_string_to_class(kernel_opts['base_kernel'])
+                            # 创建核函数实例而不是类
+                            base_kernel_instance = base_kernel_class()
+                            kernel_opts['base_kernel'] = base_kernel_instance
+                    
+                    # 创建模型配置
+                    model_config = ModelConfig(
+                        botorch_model_class=model_class,
+                        covar_module_class=kernel_cls,
+                        covar_module_options=kernel_opts,
+                    )
+            else:
+                # 如果没有模型类，但有核函数类，创建默认配置
+                # 特殊处理ScaleKernel的base_kernel配置
+                if kernel_cls is not None and hasattr(kernel_cls, '__name__') and kernel_cls.__name__ == 'ScaleKernel':
+                    if 'base_kernel' in kernel_opts and isinstance(kernel_opts['base_kernel'], str):
+                        # 将base_kernel字符串转换为实际的核函数类
+                        base_kernel_class = convert_string_to_class(kernel_opts['base_kernel'])
+                        # 创建核函数实例而不是类
+                        base_kernel_instance = base_kernel_class()
+                        kernel_opts['base_kernel'] = base_kernel_instance
+                
+                # 创建模型配置
+                model_config = ModelConfig(
+                    botorch_model_class=model_class,
+                    covar_module_class=kernel_cls,
+                    covar_module_options=kernel_opts,
+                )
             
             # 创建代理规格
             surrogate_spec = SurrogateSpec(model_configs=[model_config])

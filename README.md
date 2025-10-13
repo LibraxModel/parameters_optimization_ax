@@ -238,6 +238,8 @@ print(response.json())
 | `HigherOrderGP` | 高阶高斯过程 | 存在复杂变量交互的问题 |
 | `SingleTaskVariationalGP` | 变分推断 GP | 大规模数据集优化 |
 
+**注意**: `SaasFullyBayesianSingleTaskGP`、`SaasFullyBayesianMultiTaskGP` 和 `HigherOrderGP` 不支持自定义核函数，将自动忽略 `kernel_class` 和 `kernel_options` 参数。
+
 ### 核函数 (Kernels)
 
 | 核函数名称 | 描述 | 参数 | 适用场景 |

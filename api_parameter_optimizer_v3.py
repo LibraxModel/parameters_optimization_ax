@@ -8,6 +8,8 @@ import tempfile
 import os
 import json
 import uuid
+from pathlib import Path
+from datetime import datetime
 from doe_init import generate_sobol_parameters, generate_lhs_parameters, generate_uniform_parameters
 from ax_optimizer import BayesianOptimizer, ExperimentResult
 from analysis import ParameterOptimizationAnalysis
@@ -19,8 +21,90 @@ app = FastAPI(
     version="3.0.0"
 )
 
+# 持久化存储配置
+PERSISTENT_OUTPUT_DIR = Path("/root/sxw/parameters_optimization_ax/analysis_outputs")
+CHART_FILES_METADATA = PERSISTENT_OUTPUT_DIR / "chart_files.json"
+
+# 确保持久化目录存在
+PERSISTENT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
 # 存储图表文件映射的全局变量
 chart_files = {}
+
+# 启动时加载已存在的图表映射
+def load_chart_files():
+    """从持久化存储加载图表文件映射"""
+    global chart_files
+    if CHART_FILES_METADATA.exists():
+        try:
+            with open(CHART_FILES_METADATA, 'r', encoding='utf-8') as f:
+                chart_files = json.load(f)
+            print(f"✅ 加载了 {len(chart_files)} 个已存在的图表文件映射")
+        except Exception as e:
+            print(f"⚠️ 加载图表文件映射失败: {e}")
+            chart_files = {}
+    else:
+        chart_files = {}
+
+def save_chart_files():
+    """保存图表文件映射到持久化存储"""
+    try:
+        with open(CHART_FILES_METADATA, 'w', encoding='utf-8') as f:
+            json.dump(chart_files, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"⚠️ 保存图表文件映射失败: {e}")
+
+# 启动时加载
+load_chart_files()
+
+def cleanup_expired_files(days=30):
+    """清理超过指定天数的过期文件"""
+    try:
+        from datetime import datetime, timedelta
+        cutoff_date = datetime.now() - timedelta(days=days)
+        
+        # 清理过期的图表文件
+        expired_files = []
+        for file_id, file_info in list(chart_files.items()):
+            if 'created_at' in file_info:
+                created_at = datetime.fromisoformat(file_info['created_at'])
+                if created_at < cutoff_date:
+                    expired_files.append(file_id)
+        
+        # 删除过期的文件映射和实际文件
+        for file_id in expired_files:
+            file_info = chart_files[file_id]
+            file_path = file_info['path']
+            
+            # 删除实际文件
+            if os.path.exists(file_path):
+                try:
+                    os.unlink(file_path)
+                    print(f"🗑️ 删除过期文件: {file_path}")
+                except Exception as e:
+                    print(f"⚠️ 删除文件失败 {file_path}: {e}")
+            
+            # 删除映射
+            del chart_files[file_id]
+        
+        if expired_files:
+            save_chart_files()
+            print(f"✅ 清理了 {len(expired_files)} 个过期文件")
+        
+        # 清理空的输出目录
+        for output_dir in PERSISTENT_OUTPUT_DIR.iterdir():
+            if output_dir.is_dir() and not any(output_dir.iterdir()):
+                try:
+                    output_dir.rmdir()
+                    print(f"🗑️ 删除空目录: {output_dir}")
+                except Exception as e:
+                    print(f"⚠️ 删除目录失败 {output_dir}: {e}")
+                    
+    except Exception as e:
+        print(f"⚠️ 清理过期文件失败: {e}")
+
+# 启动时清理过期文件（可选）
+# cleanup_expired_files(days=30)
 
 
 
@@ -365,6 +449,71 @@ async def view_chart(file_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"读取图表文件失败: {str(e)}")
 
+@app.get("/charts")
+async def list_charts():
+    """列出所有可用的图表文件"""
+    try:
+        charts_info = []
+        for file_id, file_info in chart_files.items():
+            chart_info = {
+                "file_id": file_id,
+                "filename": file_info.get("filename", "unknown"),
+                "type": file_info.get("type", "unknown"),
+                "created_at": file_info.get("created_at", "unknown"),
+                "url": f"/chart/{file_id}",
+                "exists": os.path.exists(file_info.get("path", ""))
+            }
+            charts_info.append(chart_info)
+        
+        # 按创建时间排序（最新的在前）
+        charts_info.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        
+        return {
+            "success": True,
+            "total_charts": len(charts_info),
+            "charts": charts_info,
+            "output_directory": str(PERSISTENT_OUTPUT_DIR)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取图表列表失败: {str(e)}")
+
+@app.delete("/charts/{file_id}")
+async def delete_chart(file_id: str):
+    """删除指定的图表文件"""
+    if file_id not in chart_files:
+        raise HTTPException(status_code=404, detail="图表不存在")
+    
+    try:
+        file_info = chart_files[file_id]
+        file_path = file_info["path"]
+        
+        # 删除实际文件
+        if os.path.exists(file_path):
+            os.unlink(file_path)
+        
+        # 删除映射
+        del chart_files[file_id]
+        save_chart_files()
+        
+        return {
+            "success": True,
+            "message": f"成功删除图表文件: {file_info.get('filename', 'unknown')}"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"删除图表文件失败: {str(e)}")
+
+@app.post("/charts/cleanup")
+async def cleanup_charts(days: int = 30):
+    """清理超过指定天数的过期图表文件"""
+    try:
+        cleanup_expired_files(days)
+        return {
+            "success": True,
+            "message": f"清理完成，删除了超过 {days} 天的过期文件"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"清理文件失败: {str(e)}")
+
 
 
 
@@ -557,9 +706,10 @@ async def analyze_experiment_data(
             # 检查数据中是否包含类别数据
             has_categorical = check_categorical_data(data, param_list)
             
-            # 创建输出目录
-            output_dir = f"analysis_output_{tempfile.mktemp()}"
-            os.makedirs(output_dir, exist_ok=True)
+            # 创建持久化输出目录
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_dir = PERSISTENT_OUTPUT_DIR / f"analysis_{timestamp}"
+            output_dir.mkdir(parents=True, exist_ok=True)
             
             # 创建分析器
             analyzer = ParameterOptimizationAnalysis(
@@ -586,10 +736,13 @@ async def analyze_experiment_data(
                 
                 # 存储文件映射
                 chart_files[file_id] = {
-                    "path": saved_path,
+                    "path": str(saved_path),
                     "filename": filename,
-                    "type": "parallel_coordinates"
+                    "type": "parallel_coordinates",
+                    "created_at": datetime.now().isoformat()
                 }
+                # 立即保存到持久化存储
+                save_chart_files()
                 
                 # 添加查看链接
                 view_links.append({
@@ -618,10 +771,13 @@ async def analyze_experiment_data(
                     
                     # 存储文件映射
                     chart_files[file_id] = {
-                        "path": saved_path,
+                        "path": str(saved_path),
                         "filename": filename,
-                        "type": "feature_importance"
+                        "type": "feature_importance",
+                        "created_at": datetime.now().isoformat()
                     }
+                    # 立即保存到持久化存储
+                    save_chart_files()
                     
                     # 添加查看链接
                     view_links.append({
@@ -655,10 +811,13 @@ async def analyze_experiment_data(
                     
                     # 存储文件映射
                     chart_files[file_id] = {
-                        "path": saved_path,
+                        "path": str(saved_path),
                         "filename": filename,
-                        "type": "cross_validation"
+                        "type": "cross_validation",
+                        "created_at": datetime.now().isoformat()
                     }
+                    # 立即保存到持久化存储
+                    save_chart_files()
                     
                     # 添加查看链接
                     view_links.append({
@@ -689,7 +848,7 @@ async def analyze_experiment_data(
                 success=True,
                 message=message,
                 generated_plots=generated_plots,
-                output_directory=output_dir,
+                output_directory=str(output_dir),
                 has_categorical_data=has_categorical,
                 view_links=view_links
             )
@@ -739,9 +898,10 @@ async def analyze_slice_plot(
             tmp_file_path = tmp_file.name
         
         try:
-            # 创建输出目录
-            output_dir = f"analysis_output_{tempfile.mktemp()}"
-            os.makedirs(output_dir, exist_ok=True)
+            # 创建持久化输出目录
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_dir = PERSISTENT_OUTPUT_DIR / f"slice_{timestamp}"
+            output_dir.mkdir(parents=True, exist_ok=True)
             
             # 创建分析器
             analyzer = ParameterOptimizationAnalysis(
@@ -777,10 +937,13 @@ async def analyze_slice_plot(
                 
                 # 存储文件映射
                 chart_files[file_id] = {
-                    "path": saved_path,
+                    "path": str(saved_path),
                     "filename": filename,
-                    "type": "slice"
+                    "type": "slice",
+                    "created_at": datetime.now().isoformat()
                 }
+                # 立即保存到持久化存储
+                save_chart_files()
                 
                 # 构建查看链接
                 view_link = {
@@ -858,9 +1021,10 @@ async def analyze_contour_plot(
             tmp_file_path = tmp_file.name
         
         try:
-            # 创建输出目录
-            output_dir = f"analysis_output_{tempfile.mktemp()}"
-            os.makedirs(output_dir, exist_ok=True)
+            # 创建持久化输出目录
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_dir = PERSISTENT_OUTPUT_DIR / f"contour_{timestamp}"
+            output_dir.mkdir(parents=True, exist_ok=True)
             
             # 创建分析器
             analyzer = ParameterOptimizationAnalysis(
@@ -896,10 +1060,13 @@ async def analyze_contour_plot(
                 
                 # 存储文件映射
                 chart_files[file_id] = {
-                    "path": saved_path,
+                    "path": str(saved_path),
                     "filename": filename,
-                    "type": "contour"
+                    "type": "contour",
+                    "created_at": datetime.now().isoformat()
                 }
+                # 立即保存到持久化存储
+                save_chart_files()
                 
                 # 构建查看链接
                 view_link = {
