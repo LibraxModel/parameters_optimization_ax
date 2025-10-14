@@ -149,6 +149,7 @@ convenience_function_test/
 contour_test_output/
 ax_analysis_output/
 analysis_output/
+analysis_outputs/
 api_analysis_output_*/
 simplified_interface_test/
 convenience_function_test/
