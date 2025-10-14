@@ -223,7 +223,8 @@ class ParameterOptimizationAnalysis:
             autosize=True,
             margin=dict(l=50, r=150, t=80, b=50)
         )
-        fig.show(config={'responsive': True})
+        # 不显示图表到控制台，避免日志中输出大量HTML
+        # fig.show(config={'responsive': True})
         plots["parallel_coords_combined"] = fig
         
         self.plots.update(plots)
@@ -458,7 +459,8 @@ class ParameterOptimizationAnalysis:
                 zeroline=False
             )
         )
-        fig.show(config={'responsive': True})
+        # 不显示图表到控制台，避免日志中输出大量HTML
+        # fig.show(config={'responsive': True})
         
         return fig
     
@@ -956,7 +958,8 @@ class ParameterOptimizationAnalysis:
                 gridwidth=1,
                 gridcolor='lightgray'
             )
-            fig.show(config={'responsive': True})
+            # 不显示图表到控制台，避免日志中输出大量HTML
+        # fig.show(config={'responsive': True})
             return fig
             
         except Exception as e:
@@ -1202,7 +1205,8 @@ class ParameterOptimizationAnalysis:
                 gridcolor='lightgray',
                 zeroline=False
             )
-            fig.show(config={'responsive': True})
+            # 不显示图表到控制台，避免日志中输出大量HTML
+        # fig.show(config={'responsive': True})
             return fig
             
         except Exception as e:
@@ -1227,7 +1231,8 @@ class ParameterOptimizationAnalysis:
                 # width=800
                 autosize=True
             )
-            fig.show(config={'responsive': True})
+            # 不显示图表到控制台，避免日志中输出大量HTML
+        # fig.show(config={'responsive': True})
             return fig
     
     def _create_slice_hover_template(self, param: str, objective: str, status_quo: pd.Series, other_params: List[str]) -> str:
@@ -1589,7 +1594,8 @@ class ParameterOptimizationAnalysis:
                 gridwidth=1,
                 gridcolor='lightgray'
             )
-            fig.show(config={'responsive': True})
+            # 不显示图表到控制台，避免日志中输出大量HTML
+        # fig.show(config={'responsive': True})
             return fig
             
         except Exception as e:
@@ -1777,7 +1783,8 @@ class ParameterOptimizationAnalysis:
             # width=600
             autosize=True
         )
-        fig.show(config={'responsive': True})
+        # 不显示图表到控制台，避免日志中输出大量HTML
+        # fig.show(config={'responsive': True})
         return fig
     
 
@@ -1977,7 +1984,8 @@ class ParameterOptimizationAnalysis:
                 )
             ]
         )
-        fig.show(config={'responsive': True})
+        # 不显示图表到控制台，避免日志中输出大量HTML
+        # fig.show(config={'responsive': True})
         return fig
     
     def save_plots(self, format: str = 'html') -> List[str]:
