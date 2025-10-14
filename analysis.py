@@ -218,11 +218,12 @@ class ParameterOptimizationAnalysis:
             plot_bgcolor='white',
             paper_bgcolor='white',
             font=dict(size=11),
-            height=700,
-            width=max(1200, 150 * (len(parameters) + len(objectives) + 1)),  # 动态调整宽度
+            # height=700,
+            # width=max(1200, 150 * (len(parameters) + len(objectives) + 1)),  # 动态调整宽度
+            autosize=True,
             margin=dict(l=50, r=150, t=80, b=50)
         )
-        
+        fig.show(config={'responsive': True})
         plots["parallel_coords_combined"] = fig
         
         self.plots.update(plots)
@@ -441,8 +442,9 @@ class ParameterOptimizationAnalysis:
             yaxis_title="Features",
             plot_bgcolor='white',
             paper_bgcolor='white',
-            height=500,
-            width=800,
+            # height=500,
+            # width=800,
+            autosize=True,
             margin=dict(l=50, r=50, t=80, b=50),
             # 图表整体居中
             xaxis=dict(
@@ -456,6 +458,7 @@ class ParameterOptimizationAnalysis:
                 zeroline=False
             )
         )
+        fig.show(config={'responsive': True})
         
         return fig
     
@@ -928,8 +931,9 @@ class ParameterOptimizationAnalysis:
                 yaxis_title=param2,
                 plot_bgcolor='white',
                 paper_bgcolor='white',
-                height=600,
-                width=800,
+                # height=600,
+                # width=800,
+                autosize=True,
                 margin=dict(l=50, r=50, t=80, b=50),
                 showlegend=True,
                 legend=dict(
@@ -952,7 +956,7 @@ class ParameterOptimizationAnalysis:
                 gridwidth=1,
                 gridcolor='lightgray'
             )
-            
+            fig.show(config={'responsive': True})
             return fig
             
         except Exception as e:
@@ -1171,8 +1175,9 @@ class ParameterOptimizationAnalysis:
                 yaxis_title=objective,
                 plot_bgcolor='white',
                 paper_bgcolor='white',
-                height=500,
-                width=800,
+                # height=500,
+                # width=800,
+                autosize=True,
                 margin=dict(l=50, r=50, t=80, b=50),
                 showlegend=True,
                 legend=dict(
@@ -1197,7 +1202,7 @@ class ParameterOptimizationAnalysis:
                 gridcolor='lightgray',
                 zeroline=False
             )
-            
+            fig.show(config={'responsive': True})
             return fig
             
         except Exception as e:
@@ -1218,9 +1223,11 @@ class ParameterOptimizationAnalysis:
                 title=f"{param} vs {objective} (Error)",
                 plot_bgcolor='white',
                 paper_bgcolor='white',
-                height=500,
-                width=800
+                # height=500,
+                # width=800
+                autosize=True
             )
+            fig.show(config={'responsive': True})
             return fig
     
     def _create_slice_hover_template(self, param: str, objective: str, status_quo: pd.Series, other_params: List[str]) -> str:
@@ -1538,8 +1545,9 @@ class ParameterOptimizationAnalysis:
                 yaxis_title=f"Predicted {objective}",
                 plot_bgcolor='white',
                 paper_bgcolor='white',
-                height=600,
-                width=800,
+                # height=600,
+                # width=800,
+                autosize=True,
                 margin=dict(l=50, r=50, t=100, b=50),
                 showlegend=True,
                 legend=dict(
@@ -1581,7 +1589,7 @@ class ParameterOptimizationAnalysis:
                 gridwidth=1,
                 gridcolor='lightgray'
             )
-            
+            fig.show(config={'responsive': True})
             return fig
             
         except Exception as e:
@@ -1765,9 +1773,11 @@ class ParameterOptimizationAnalysis:
             title="Cross Validation Error",
             plot_bgcolor='white',
             paper_bgcolor='white',
-            height=400,
-            width=600
+            # height=400,
+            # width=600
+            autosize=True
         )
+        fig.show(config={'responsive': True})
         return fig
     
 
@@ -1908,8 +1918,9 @@ class ParameterOptimizationAnalysis:
             title=f"Interactive Feature Analysis for {target_name}",
             plot_bgcolor='white',
             paper_bgcolor='white',
-            height=500,
-            width=1500,
+            # height=500,
+            # width=1500,
+            autosize=True,
             margin=dict(l=50, r=50, t=80, b=50),
             showlegend=False
         )
@@ -1966,7 +1977,7 @@ class ParameterOptimizationAnalysis:
                 )
             ]
         )
-        
+        fig.show(config={'responsive': True})
         return fig
     
     def save_plots(self, format: str = 'html') -> List[str]:
