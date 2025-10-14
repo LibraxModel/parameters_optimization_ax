@@ -125,6 +125,12 @@ class BayesianOptimizer:
             kernel_cls = kernel_class or None
             kernel_opts = kernel_options or {}
             
+            # 特殊处理：为PolynomialKernel设置默认power参数
+            if kernel_cls is not None and hasattr(kernel_cls, '__name__') and kernel_cls.__name__ == 'PolynomialKernel':
+                if 'power' not in kernel_opts or kernel_opts['power'] == '' or kernel_opts['power'] is None:
+                    kernel_opts['power'] = 2
+                    print(f"🔧 PolynomialKernel: 设置默认power参数为2")
+            
             # 特殊处理：某些模型不支持自定义 covar_module
             if model_class is not None and hasattr(model_class, '__name__'):
                 model_name = model_class.__name__
@@ -155,6 +161,12 @@ class BayesianOptimizer:
                     )
             else:
                 # 如果没有模型类，但有核函数类，创建默认配置
+                # 特殊处理：为PolynomialKernel设置默认power参数
+                if kernel_cls is not None and hasattr(kernel_cls, '__name__') and kernel_cls.__name__ == 'PolynomialKernel':
+                    if 'power' not in kernel_opts or kernel_opts['power'] == '' or kernel_opts['power'] is None:
+                        kernel_opts['power'] = 2
+                        print(f"🔧 PolynomialKernel: 设置默认power参数为2")
+                
                 # 特殊处理ScaleKernel的base_kernel配置
                 if kernel_cls is not None and hasattr(kernel_cls, '__name__') and kernel_cls.__name__ == 'ScaleKernel':
                     if 'base_kernel' in kernel_opts and isinstance(kernel_opts['base_kernel'], str):

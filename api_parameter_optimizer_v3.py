@@ -417,21 +417,6 @@ async def health_check():
     """健康检查端点"""
     return {"status": "healthy", "service": "parameter_optimization_v3"}
 
-@app.get("/available_classes")
-async def get_available_classes():
-    """获取可用的类列表"""
-    try:
-        import sys
-        import os
-        sys.path.append(os.path.dirname(__file__))
-        from __init__ import get_available_classes, get_class_parameters
-        return {
-            "categories": get_available_classes(),
-            "parameters": get_class_parameters()
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取可用类列表失败: {str(e)}")
-
 @app.get("/chart/{file_id}", response_class=HTMLResponse)
 async def view_chart(file_id: str):
     """查看图表（在浏览器中渲染）"""
