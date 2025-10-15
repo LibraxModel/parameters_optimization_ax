@@ -45,6 +45,7 @@ class ParameterOptimizationAnalysis:
         self,
         experiment_data: Optional[pd.DataFrame] = None,
         experiment_file: Optional[str] = None,
+        completed_experiments: Optional[List[Dict[str, Any]]] = None,
         output_dir: str = "analysis_output"
     ):
         """
@@ -53,15 +54,20 @@ class ParameterOptimizationAnalysis:
         Args:
             experiment_data: 实验数据DataFrame
             experiment_file: 实验数据文件路径
+            completed_experiments: JSON格式的实验数据列表
             output_dir: 输出目录
         """
         self.experiment_data = experiment_data
         self.experiment_file = experiment_file
+        self.completed_experiments = completed_experiments
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
         
+        # 如果提供了JSON格式的实验数据，转换为DataFrame
+        if completed_experiments and experiment_data is None:
+            self.experiment_data = self._convert_json_to_dataframe(completed_experiments)
         # 如果提供了文件路径，加载数据
-        if experiment_file and experiment_data is None:
+        elif experiment_file and experiment_data is None:
             self.load_experiment_data(experiment_file)
         
         # 初始化分析结果存储
@@ -70,6 +76,31 @@ class ParameterOptimizationAnalysis:
         
         # 添加Ax优化器缓存，避免重复重建
         self._ax_optimizer_cache = {}
+    
+    def _convert_json_to_dataframe(self, completed_experiments: List[Dict[str, Any]]) -> pd.DataFrame:
+        """
+        将JSON格式的实验数据转换为DataFrame
+        
+        Args:
+            completed_experiments: JSON格式的实验数据列表
+            
+        Returns:
+            转换后的DataFrame
+        """
+        data_rows = []
+        for exp in completed_experiments:
+            row = {}
+            # 添加参数
+            if 'parameters' in exp:
+                for param_name, param_value in exp['parameters'].items():
+                    row[param_name] = param_value
+            # 添加目标
+            if 'metrics' in exp:
+                for obj_name, obj_value in exp['metrics'].items():
+                    row[obj_name] = obj_value
+            data_rows.append(row)
+        
+        return pd.DataFrame(data_rows)
         
     def load_experiment_data(self, file_path: str) -> pd.DataFrame:
         """
