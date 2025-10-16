@@ -98,6 +98,15 @@ class BayesianOptimizer:
         self.experiment_name = experiment_name
         self.random_seed = random_seed
         
+        # 设置GPU设备
+        import torch
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda")
+            print(f"🚀 使用GPU加速: {torch.cuda.get_device_name()}")
+        else:
+            self.device = torch.device("cpu")
+            print("⚠️ GPU不可用，使用CPU")
+        
         # 处理字符串到类的转换
         def convert_string_to_class(class_obj):
             """将字符串转换为类对象"""
