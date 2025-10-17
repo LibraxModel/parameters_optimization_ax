@@ -808,6 +808,9 @@ class ParameterOptimizationAnalysis:
                     plot_key = f'contour_["{objective}","{param1}","{param2}"]'
                     plots[plot_key] = contour_fig
                     self.plots[plot_key] = contour_fig
+                    
+                    # 立即保存当前生成的等高线图
+                    saved_path = self.save_single_plot(plot_key, contour_fig)
                     print(f"    ✅ 完成: {plot_key}")
                     
                 except Exception as e:

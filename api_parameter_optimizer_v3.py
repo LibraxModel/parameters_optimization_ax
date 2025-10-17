@@ -906,7 +906,8 @@ async def analyze_slice_plot(request: SliceAnalysisRequest):
         plot_name = f'slice_["{request.objective}","{request.parameter}"]'
         # 检查是否生成了用户指定的切片图
         if plot_name in analyzer.plots:
-            # 保存图表
+            # 保存图表并获取实际保存路径
+            # 注：analysis.py内部已保存一次，这里再次保存以确保获得准确的文件路径
             saved_path = analyzer.save_single_plot(plot_name, analyzer.plots[plot_name])
             
             # 生成唯一的文件ID
@@ -1015,7 +1016,8 @@ async def analyze_contour_plot(request: ContourAnalysisRequest):
         plot_name = f'contour_["{request.objective}","{request.parameter1}","{request.parameter2}"]'
         # 检查是否生成了用户指定的等高线图
         if plot_name in analyzer.plots:
-            # 保存图表
+            # 保存图表并获取实际保存路径
+            # 注：analysis.py内部已保存一次，这里再次保存以确保获得准确的文件路径
             saved_path = analyzer.save_single_plot(plot_name, analyzer.plots[plot_name])
             
             # 生成唯一的文件ID
