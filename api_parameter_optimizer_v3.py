@@ -1066,6 +1066,9 @@ async def analyze_contour_plot(request: ContourAnalysisRequest):
             )
             
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"❌ 等高线图分析失败详细错误:\n{error_details}")
         raise HTTPException(status_code=500, detail=f"等高线图分析失败: {str(e)}")
 
 if __name__ == "__main__":
