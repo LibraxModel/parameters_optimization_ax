@@ -21,8 +21,8 @@ app = FastAPI(
     version="3.0.0"
 )
 
-# 持久化存储配置
-PERSISTENT_OUTPUT_DIR = Path("/root/sxw/parameters_optimization_ax/analysis_outputs")
+# 持久化存储配置 - 使用当前工作目录，兼容非root用户和Windows
+PERSISTENT_OUTPUT_DIR = Path.cwd() / "analysis_output"
 CHART_FILES_METADATA = PERSISTENT_OUTPUT_DIR / "chart_files.json"
 
 # 确保持久化目录存在
