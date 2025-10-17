@@ -436,7 +436,11 @@ async def view_chart(file_id: str):
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             html_content = f.read()
-        return HTMLResponse(content=html_content)
+        response = HTMLResponse(content=html_content)
+        response.headers["Access-Control-Allow-Origin"] = "*"  # 允许所有域访问
+        response.headers["Access-Control-Allow-Methods"] = "GET"  # 允许的HTTP方法
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"  # 允许的请求头
+        return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"读取图表文件失败: {str(e)}")
 
