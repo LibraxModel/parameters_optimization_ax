@@ -36,39 +36,54 @@ app.mount("/static", CacheControlledStaticFiles(directory=Path("static"), html=T
 
 # 持久化存储配置 - 使用当前工作目录，兼容非root用户和Windows
 PERSISTENT_OUTPUT_DIR = Path.cwd() / "analysis_outputs"
-CHART_FILES_METADATA = PERSISTENT_OUTPUT_DIR / "chart_files.json"
-
+CHART_METADATA_DIR = PERSISTENT_OUTPUT_DIR / "chart_metadata"
 # 确保持久化目录存在
 PERSISTENT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+CHART_METADATA_DIR.mkdir(parents=True, exist_ok=True)
 
-# 存储图表文件映射的全局变量
-chart_files = {}
+# 旧的加载函数已移除，现在使用小文件存储
 
-# 启动时加载已存在的图表映射
-def load_chart_files():
-    """从持久化存储加载图表文件映射"""
-    global chart_files
-    if CHART_FILES_METADATA.exists():
-        try:
-            with open(CHART_FILES_METADATA, 'r', encoding='utf-8') as f:
-                chart_files = json.load(f)
-            print(f"✅ 加载了 {len(chart_files)} 个已存在的图表文件映射")
-        except Exception as e:
-            print(f"⚠️ 加载图表文件映射失败: {e}")
-            chart_files = {}
-    else:
-        chart_files = {}
-
-def save_chart_files():
-    """保存图表文件映射到持久化存储"""
+def save_single_chart_metadata(chart_id: str, metadata: Dict[str, Any]) -> bool:
+    """保存单个图表的元数据到小文件"""
     try:
-        with open(CHART_FILES_METADATA, 'w', encoding='utf-8') as f:
-            json.dump(chart_files, f, ensure_ascii=False, indent=2)
+        metadata_file = CHART_METADATA_DIR / f"{chart_id}.json"
+        with open(metadata_file, 'w', encoding='utf-8') as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=2)
+        return True
     except Exception as e:
-        print(f"⚠️ 保存图表文件映射失败: {e}")
+        print(f"❌ 保存图表元数据失败 {chart_id}: {e}")
+        return False
 
-# 启动时加载
-load_chart_files()
+def load_single_chart_metadata(chart_id: str) -> Optional[Dict[str, Any]]:
+    """加载单个图表的元数据"""
+    try:
+        metadata_file = CHART_METADATA_DIR / f"{chart_id}.json"
+        if not metadata_file.exists():
+            return None
+        with open(metadata_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"❌ 加载图表元数据失败 {chart_id}: {e}")
+        return None
+
+def list_all_chart_metadata() -> Dict[str, Dict[str, Any]]:
+    """列出所有图表的元数据"""
+    charts = {}
+    try:
+        for metadata_file in CHART_METADATA_DIR.glob("*.json"):
+            try:
+                with open(metadata_file, 'r', encoding='utf-8') as f:
+                    metadata = json.load(f)
+                    chart_id = metadata_file.stem  # 文件名作为chart_id
+                    charts[chart_id] = metadata
+            except Exception as e:
+                print(f"⚠️ 读取元数据文件失败 {metadata_file}: {e}")
+                continue
+    except Exception as e:
+        print(f"❌ 遍历元数据目录失败: {e}")
+    return charts
+
+# 旧的保存函数已移除，现在直接使用小文件存储
 
 def cleanup_expired_files(days=30):
     """清理超过指定天数的过期文件"""
@@ -77,32 +92,35 @@ def cleanup_expired_files(days=30):
         cutoff_date = datetime.now() - timedelta(days=days)
         
         # 清理过期的图表文件
-        expired_files = []
-        for file_id, file_info in list(chart_files.items()):
-            if 'created_at' in file_info:
-                created_at = datetime.fromisoformat(file_info['created_at'])
-                if created_at < cutoff_date:
-                    expired_files.append(file_id)
+        expired_count = 0
+        for metadata_file in CHART_METADATA_DIR.glob("*.json"):
+            try:
+                with open(metadata_file, 'r', encoding='utf-8') as f:
+                    metadata = json.load(f)
+                
+                created_at_str = metadata.get('created_at', '')
+                if created_at_str:
+                    created_at = datetime.fromisoformat(created_at_str)
+                    if created_at < cutoff_date:
+                        # 删除图表文件
+                        file_path = metadata.get('path', '')
+                        if file_path and os.path.exists(file_path):
+                            try:
+                                os.unlink(file_path)
+                                print(f"🗑️ 删除过期文件: {file_path}")
+                            except Exception as e:
+                                print(f"⚠️ 删除文件失败 {file_path}: {e}")
+                        
+                        # 删除元数据文件
+                        metadata_file.unlink()
+                        expired_count += 1
+                        
+            except Exception as e:
+                print(f"⚠️ 处理文件失败 {metadata_file}: {e}")
+                continue
         
-        # 删除过期的文件映射和实际文件
-        for file_id in expired_files:
-            file_info = chart_files[file_id]
-            file_path = file_info['path']
-            
-            # 删除实际文件
-            if os.path.exists(file_path):
-                try:
-                    os.unlink(file_path)
-                    print(f"🗑️ 删除过期文件: {file_path}")
-                except Exception as e:
-                    print(f"⚠️ 删除文件失败 {file_path}: {e}")
-            
-            # 删除映射
-            del chart_files[file_id]
-        
-        if expired_files:
-            save_chart_files()
-            print(f"✅ 清理了 {len(expired_files)} 个过期文件")
+        if expired_count > 0:
+            print(f"✅ 清理了 {expired_count} 个过期文件")
         
         # 清理空的输出目录
         for output_dir in PERSISTENT_OUTPUT_DIR.iterdir():
@@ -439,21 +457,14 @@ async def health_check():
 @app.get("/chart/{file_id}", response_class=HTMLResponse)
 async def view_chart(file_id: str):
     """查看图表（在浏览器中渲染）"""
-    # 每次请求时从文件重新加载，确保多进程环境下数据一致
-    current_chart_files = {}
-    if CHART_FILES_METADATA.exists():
-        try:
-            with open(CHART_FILES_METADATA, 'r', encoding='utf-8') as f:
-                current_chart_files = json.load(f)
-        except Exception as e:
-            print(f"⚠️ 读取图表文件映射失败: {e}")
-            raise HTTPException(status_code=500, detail=f"读取图表映射失败: {str(e)}")
+    # 使用新的小文件存储方式，直接读取单个图表的元数据
+    chart_metadata = load_single_chart_metadata(file_id)
     
-    if file_id not in current_chart_files:
+    if not chart_metadata:
         raise HTTPException(status_code=404, detail="图表不存在")
     
-    file_path = current_chart_files[file_id]["path"]
-    if not os.path.exists(file_path):
+    file_path = chart_metadata.get("path", "")
+    if not file_path or not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="图表文件已被删除")
     
     try:
@@ -471,15 +482,8 @@ async def view_chart(file_id: str):
 async def list_charts():
     """列出所有可用的图表文件"""
     try:
-        # 每次请求时从文件重新加载，确保多进程环境下数据一致
-        current_chart_files = {}
-        if CHART_FILES_METADATA.exists():
-            try:
-                with open(CHART_FILES_METADATA, 'r', encoding='utf-8') as f:
-                    current_chart_files = json.load(f)
-            except Exception as e:
-                print(f"⚠️ 读取图表文件映射失败: {e}")
-                current_chart_files = {}
+        # 使用新的小文件存储方式，遍历所有小文件
+        current_chart_files = list_all_chart_metadata()
         
         charts_info = []
         for file_id, file_info in current_chart_files.items():
@@ -508,24 +512,26 @@ async def list_charts():
 @app.delete("/charts/{file_id}")
 async def delete_chart(file_id: str):
     """删除指定的图表文件"""
-    if file_id not in chart_files:
+    # 使用新的小文件存储方式
+    chart_metadata = load_single_chart_metadata(file_id)
+    if not chart_metadata:
         raise HTTPException(status_code=404, detail="图表不存在")
     
     try:
-        file_info = chart_files[file_id]
-        file_path = file_info["path"]
+        file_path = chart_metadata.get("path", "")
         
         # 删除实际文件
-        if os.path.exists(file_path):
+        if file_path and os.path.exists(file_path):
             os.unlink(file_path)
         
-        # 删除映射
-        del chart_files[file_id]
-        save_chart_files()
+        # 删除元数据文件
+        metadata_file = CHART_METADATA_DIR / f"{file_id}.json"
+        if metadata_file.exists():
+            metadata_file.unlink()
         
         return {
             "success": True,
-            "message": f"成功删除图表文件: {file_info.get('filename', 'unknown')}"
+            "message": f"成功删除图表文件: {chart_metadata.get('filename', 'unknown')}"
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"删除图表文件失败: {str(e)}")
@@ -767,15 +773,14 @@ async def analyze_experiment_data(request: AnalysisRequest):
             file_id = str(uuid.uuid4())
             filename = f"parallel_coords_combined.html"
             
-            # 存储文件映射
-            chart_files[file_id] = {
+            # 存储文件映射到小文件
+            metadata = {
                 "path": str(saved_path),
                 "filename": filename,
                 "type": "parallel_coordinates",
                 "created_at": datetime.now().isoformat()
             }
-            # 立即保存到持久化存储
-            save_chart_files()
+            save_single_chart_metadata(file_id, metadata)
             
             # 添加查看链接
             view_links.append({
@@ -802,15 +807,14 @@ async def analyze_experiment_data(request: AnalysisRequest):
                 file_id = str(uuid.uuid4())
                 filename = f"{plot_name}.html"
                 
-                # 存储文件映射
-                chart_files[file_id] = {
+                # 存储文件映射到小文件
+                metadata = {
                     "path": str(saved_path),
                     "filename": filename,
                     "type": "feature_importance",
                     "created_at": datetime.now().isoformat()
                 }
-                # 立即保存到持久化存储
-                save_chart_files()
+                save_single_chart_metadata(file_id, metadata)
                 
                 # 添加查看链接
                 view_links.append({
@@ -842,15 +846,14 @@ async def analyze_experiment_data(request: AnalysisRequest):
                 file_id = str(uuid.uuid4())
                 filename = f"{plot_name}.html"
                 
-                # 存储文件映射
-                chart_files[file_id] = {
+                # 存储文件映射到小文件
+                metadata = {
                     "path": str(saved_path),
                     "filename": filename,
                     "type": "cross_validation",
                     "created_at": datetime.now().isoformat()
                 }
-                # 立即保存到持久化存储
-                save_chart_files()
+                save_single_chart_metadata(file_id, metadata)
                 
                 # 添加查看链接
                 view_links.append({
@@ -951,15 +954,14 @@ async def analyze_slice_plot(request: SliceAnalysisRequest):
             file_id = str(uuid.uuid4())
             filename = f"{plot_name}.html"
             
-            # 存储文件映射
-            chart_files[file_id] = {
+            # 存储文件映射到小文件
+            metadata = {
                 "path": str(saved_path),
                 "filename": filename,
                 "type": "slice",
                 "created_at": datetime.now().isoformat()
             }
-            # 立即保存到持久化存储
-            save_chart_files()
+            save_single_chart_metadata(file_id, metadata)
             
             # 构建查看链接
             view_link = {
@@ -1061,15 +1063,14 @@ async def analyze_contour_plot(request: ContourAnalysisRequest):
             file_id = str(uuid.uuid4())
             filename = f"{plot_name}.html"
             
-            # 存储文件映射
-            chart_files[file_id] = {
+            # 存储文件映射到小文件
+            metadata = {
                 "path": str(saved_path),
                 "filename": filename,
                 "type": "contour",
                 "created_at": datetime.now().isoformat()
             }
-            # 立即保存到持久化存储
-            save_chart_files()
+            save_single_chart_metadata(file_id, metadata)
             
             # 构建查看链接
             view_link = {
