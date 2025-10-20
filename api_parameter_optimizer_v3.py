@@ -426,10 +426,20 @@ async def health_check():
 @app.get("/chart/{file_id}", response_class=HTMLResponse)
 async def view_chart(file_id: str):
     """查看图表（在浏览器中渲染）"""
-    if file_id not in chart_files:
+    # 每次请求时从文件重新加载，确保多进程环境下数据一致
+    current_chart_files = {}
+    if CHART_FILES_METADATA.exists():
+        try:
+            with open(CHART_FILES_METADATA, 'r', encoding='utf-8') as f:
+                current_chart_files = json.load(f)
+        except Exception as e:
+            print(f"⚠️ 读取图表文件映射失败: {e}")
+            raise HTTPException(status_code=500, detail=f"读取图表映射失败: {str(e)}")
+    
+    if file_id not in current_chart_files:
         raise HTTPException(status_code=404, detail="图表不存在")
     
-    file_path = chart_files[file_id]["path"]
+    file_path = current_chart_files[file_id]["path"]
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="图表文件已被删除")
     
@@ -448,8 +458,18 @@ async def view_chart(file_id: str):
 async def list_charts():
     """列出所有可用的图表文件"""
     try:
+        # 每次请求时从文件重新加载，确保多进程环境下数据一致
+        current_chart_files = {}
+        if CHART_FILES_METADATA.exists():
+            try:
+                with open(CHART_FILES_METADATA, 'r', encoding='utf-8') as f:
+                    current_chart_files = json.load(f)
+            except Exception as e:
+                print(f"⚠️ 读取图表文件映射失败: {e}")
+                current_chart_files = {}
+        
         charts_info = []
-        for file_id, file_info in chart_files.items():
+        for file_id, file_info in current_chart_files.items():
             chart_info = {
                 "file_id": file_id,
                 "filename": file_info.get("filename", "unknown"),
