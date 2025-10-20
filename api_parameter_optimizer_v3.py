@@ -1,5 +1,9 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import HTMLResponse
+from starlette.responses import Response
+from starlette.types import Scope
+from starlette.staticfiles import StaticFiles
+from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional, Union, Literal
 import uvicorn
@@ -15,11 +19,20 @@ from ax_optimizer import BayesianOptimizer, ExperimentResult
 from analysis import ParameterOptimizationAnalysis
 from __init__ import get_class_from_string
 
+class CacheControlledStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "public, max-age=184600, immutable"
+        return response
+
 app = FastAPI(
     title="参数优化API v3",
     description="支持先验实验数据的参数优化API，默认sobol采样，支持多种采样方式，新增贝叶斯优化支持",
     version="3.0.0"
 )
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+app.mount("/static", CacheControlledStaticFiles(directory=Path("static"), html=True), name="static")
+
 
 # 持久化存储配置 - 使用当前工作目录，兼容非root用户和Windows
 PERSISTENT_OUTPUT_DIR = Path.cwd() / "analysis_outputs"

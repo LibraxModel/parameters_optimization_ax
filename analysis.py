@@ -2039,7 +2039,7 @@ class ParameterOptimizationAnalysis:
             filepath = self.output_dir / filename
             
             if format == 'html':
-                fig.write_html(str(filepath))
+                fig.write_html(str(filepath),include_plotlyjs="/static/js/plotly.min.js", full_html=False)
             else:
                 fig.write_image(str(filepath))
             
@@ -2064,7 +2064,7 @@ class ParameterOptimizationAnalysis:
         filepath = self.output_dir / filename
         
         if format == 'html':
-            fig.write_html(str(filepath))
+            fig.write_html(str(filepath),include_plotlyjs="/static/js/plotly.min.js", full_html=False)
         else:
             fig.write_image(str(filepath))
         
