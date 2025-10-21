@@ -155,7 +155,7 @@ class PriorExperiment(BaseModel):
 class InitRequest(BaseModel):
     parameter_space: List[ParameterSpace] = Field(..., description="参数空间定义")
     objectives: List[str] = Field(..., description="优化目标列表")
-    batch: int = Field(..., description="每批次参数数量", ge=1, le=20)
+    batch: int = Field(..., description="每批次参数数量", ge=1)
     seed: Optional[int] = Field(None, description="随机种子")
     prior_experiments: Optional[List[PriorExperiment]] = Field(None, description="先验实验数据")
     sampling_method: Optional[Literal["sobol", "lhs", "uniform"]] = Field("sobol", description="采样方法（仅在没有先验数据时生效）")
@@ -172,7 +172,7 @@ class UpdateRequest(BaseModel):
     parameter_space: List[ParameterSpace] = Field(..., description="参数空间定义")
     objectives: Dict[str, Dict[str, bool]] = Field(..., description="优化目标配置，格式为{'metric_name': {'minimize': bool}}")
     completed_experiments: List[PriorExperiment] = Field(..., description="已完成的实验结果")
-    batch: int = Field(1, description="下一批次参数数量", ge=1, le=10)
+    batch: int = Field(1, description="下一批次参数数量", ge=1)
     use_weights: Optional[bool] = Field(False, description="是否使用权重优化")
     objective_weights: Optional[Dict[str, float]] = Field(None, description="目标权重")
     additional_metrics: Optional[List[str]] = Field(None, description="额外跟踪指标")
