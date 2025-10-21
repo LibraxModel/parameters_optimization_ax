@@ -5,7 +5,7 @@ from starlette.types import Scope
 from starlette.staticfiles import StaticFiles
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional, Union, Literal
+from typing import List, Dict, Any, Optional, Union, Literal, Tuple
 import uvicorn
 import pandas as pd
 import tempfile
@@ -240,9 +240,11 @@ class SinglePlotResponse(BaseModel):
     plot_name: str = Field(..., description="生成的图表名称")
     view_link: Dict[str, str] = Field(..., description="图表查看链接，包含name、url、type字段")
 
-def convert_parameter_space_to_ax_format(parameter_space: List[ParameterSpace]) -> List[Dict[str, Any]]:
-    """将参数空间转换为Ax格式"""
+def convert_parameter_space_to_ax_format(parameter_space: List[ParameterSpace]) -> Tuple[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]:
+    """将参数空间转换为Ax格式，返回(search_space, step_info)"""
     search_space = []
+    step_info = {}  # 存储step信息，用于后续舍入
+    
     for param in parameter_space:
         if param.type == "choice":
             # 确定value_type：字符串、浮点数、整数
@@ -271,65 +273,24 @@ def convert_parameter_space_to_ax_format(parameter_space: List[ParameterSpace]) 
             if len(param.values) != 2:
                 raise ValueError(f"参数 {param.name} 的range类型必须提供[最小值, 最大值]")
             
-            # 检查是否有step参数，如果有则转换为choice
+            # 保持为range类型，无论是否有step参数
+            # step参数将在后处理中用于舍入推荐值
+            param_config = {
+                "name": param.name,
+                "type": "range",
+                "bounds": param.values,
+                "value_type": "float" if any(isinstance(x, float) for x in param.values) else "int"
+            }
+            
+            # 如果有step参数，存储到step_info中，而不是添加到Ax配置中
             if param.step is not None:
-                min_val, max_val = param.values
-                step = param.step
-                
-                # 计算小数位数用于精确处理浮点数
-                decimal_places = 0
-                if isinstance(step, float):
-                    step_str = f"{step:.10f}".rstrip('0').rstrip('.')
-                    if '.' in step_str:
-                        decimal_places = len(step_str.split('.')[1])
-                
-                # 生成步长序列，使用round避免浮点数精度问题
-                values = []
-                current_val = min_val
-                tolerance = step * 0.0001  # 添加小的容差
-                
-                while current_val <= max_val + tolerance:
-                    rounded_val = round(current_val, decimal_places)
-                    if rounded_val <= max_val:
-                        values.append(rounded_val)
-                    current_val += step
-                
-                # 确保包含最大值（如果它应该在序列中）
-                max_val_rounded = round(max_val, decimal_places)
-                if max_val_rounded not in values:
-                    # 检查max_val是否应该在序列中
-                    expected_count = round((max_val - min_val) / step) + 1
-                    if len(values) < expected_count:
-                        values.append(max_val_rounded)
-                
-                # 去重并排序
-                values = sorted(list(set(values)))
-                
-                # 确定value_type
-                if any(isinstance(x, float) for x in [min_val, max_val, step]) or decimal_places > 0:
-                    value_type = "float"
-                    values = [float(v) for v in values]
-                else:
-                    value_type = "int"
-                    values = [int(v) for v in values]
-                
-                search_space.append({
-                    "name": param.name,
-                    "type": "choice",
-                    "values": values,
-                    "value_type": value_type,
-                    "is_ordered": True,
-                    "sort_values": True
-                })
-            else:
-                # 没有step参数，保持为range类型
-                search_space.append({
-                    "name": param.name,
-                    "type": "range",
-                    "bounds": param.values,
-                    "value_type": "float" if any(isinstance(x, float) for x in param.values) else "int"
-                })
-    return search_space
+                step_info[param.name] = {
+                    "step": param.step,
+                    "bounds": param.values
+                }
+            
+            search_space.append(param_config)
+    return search_space, step_info
 
 def convert_parameter_space_to_ax_format_for_analysis(parameter_space: List[ParameterSpace]) -> List[Dict[str, Any]]:
     """将参数空间转换为Ax格式（专门用于analysis接口，忽略step参数）"""
@@ -382,6 +343,66 @@ def convert_prior_experiments_to_dict(prior_experiments: List[PriorExperiment]) 
         combined_data.update(exp.metrics)
         experiments.append(combined_data)
     return experiments
+
+def round_to_step(value: float, step: float, bounds: List[float]) -> float:
+    """
+    将值舍入到最近的step值
+    
+    Args:
+        value: 原始值
+        step: 步长
+        bounds: [min, max] 边界
+        
+    Returns:
+        舍入后的值
+    """
+    min_val, max_val = bounds
+    
+    # 计算最接近的step值
+    num_steps = round((value - min_val) / step)
+    rounded_value = min_val + num_steps * step
+    
+    # 确保在边界内
+    rounded_value = max(min_val, min(max_val, rounded_value))
+    
+    # 计算小数位数
+    decimal_places = 0
+    if isinstance(step, float):
+        step_str = f"{step:.10f}".rstrip('0').rstrip('.')
+        if '.' in step_str:
+            decimal_places = len(step_str.split('.')[1])
+    
+    # 使用相同的小数位数进行舍入
+    rounded_value = round(rounded_value, decimal_places)
+    
+    return rounded_value
+
+def apply_step_constraints(params_list: List[Dict[str, Any]], step_info: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    应用step约束，将推荐值舍入到最近的step值
+    
+    Args:
+        params_list: 推荐的参数列表
+        step_info: 包含step信息的字典
+        
+    Returns:
+        应用step约束后的参数列表
+    """
+    # 应用step约束
+    constrained_params_list = []
+    for params in params_list:
+        constrained_params = {}
+        for key, value in params.items():
+            if key in step_info and isinstance(value, (int, float)):
+                # 应用step舍入
+                info = step_info[key]
+                constrained_value = round_to_step(value, info["step"], info["bounds"])
+                constrained_params[key] = constrained_value
+            else:
+                constrained_params[key] = value
+        constrained_params_list.append(constrained_params)
+    
+    return constrained_params_list
 
 def fix_float_precision(params_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """修复浮点数精度问题"""
@@ -556,7 +577,7 @@ async def initialize_optimization(request: InitRequest):
     """初始化优化，支持先验实验数据"""
     try:
         # 转换参数空间格式
-        search_space = convert_parameter_space_to_ax_format(request.parameter_space)
+        search_space, step_info = convert_parameter_space_to_ax_format(request.parameter_space)
         
         # 确定采样方法
         if request.prior_experiments:
@@ -590,8 +611,11 @@ async def initialize_optimization(request: InitRequest):
         if not params_list:
             raise HTTPException(status_code=500, detail="采样函数未生成任何参数组合")
         
+        # 应用step约束（如果有）
+        results = apply_step_constraints(params_list, step_info)
+        
         # 修复浮点数精度问题
-        results = fix_float_precision(params_list)
+        results = fix_float_precision(results)
         
         return InitResponse(
             success=True,
@@ -608,7 +632,7 @@ async def update_optimization(request: UpdateRequest):
     """贝叶斯优化接口：基于历史数据推荐下一组参数"""
     try:
         # 转换参数空间格式
-        search_space = convert_parameter_space_to_ax_format(request.parameter_space)
+        search_space, step_info = convert_parameter_space_to_ax_format(request.parameter_space)
         
         # 构建优化配置
         optimization_config = {
@@ -641,6 +665,9 @@ async def update_optimization(request: UpdateRequest):
         # 获取下一组推荐参数
         next_trials = optimizer.get_next_parameters(n=request.batch)
         next_parameters = [params for params, _ in next_trials]
+        
+        # 应用step约束（如果有）
+        next_parameters = apply_step_constraints(next_parameters, step_info)
         
         # 修复浮点数精度问题
         next_parameters = fix_float_precision(next_parameters)
@@ -709,7 +736,7 @@ async def analyze_experiment_data(request: AnalysisRequest):
             objective_list = list(request.objectives.keys())
         
         # 转换参数空间为Ax格式
-        search_space_dict = convert_parameter_space_to_ax_format(request.parameter_space)
+        search_space_dict, _ = convert_parameter_space_to_ax_format(request.parameter_space)
         
         # 获取模型类
         surrogate_model_cls = None
