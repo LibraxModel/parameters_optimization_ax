@@ -646,7 +646,7 @@ async def update_optimization(request: UpdateRequest):
         optimizer = BayesianOptimizer(
             search_space=search_space,
             optimization_config=optimization_config,
-            random_seed=request.seed,
+            random_seed=request.seed if request.seed is not None else 42,
             surrogate_model_class=request.surrogate_model_class,
             kernel_class=request.kernel_class,
             kernel_options=request.kernel_options,
