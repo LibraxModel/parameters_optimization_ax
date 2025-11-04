@@ -4,3 +4,8 @@
 29	3	update	R3_E10	KOPiv	PPh3	DMAc	0.100	120	86.46	0.025447
 49	5	update	R5_E10	KOAc	P(fur)3	p-Xylene	0.153	120	11.99	0.035558	
 49	5	update	R5_E10	KOAc	P(fur)3	p-Xylene	0.153	120	11.99	0.035558
+KOAc,KOPiv,CsOAc,CsOPiv
+BrettPhos,PPhtBu2,tBPh-CPhos,PCy3HBF4,PPh3,X-Phos,P(fur)3,PPh2Me,GorlosPhosHBF4,JackiePhos,CgMe-PPh,PPhMe2
+DMAc,BuCN,BuOAc,p-Xylene
+0.1,0.057,0.153
+105,90,120

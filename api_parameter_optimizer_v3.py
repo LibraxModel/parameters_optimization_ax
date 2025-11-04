@@ -158,7 +158,7 @@ class InitRequest(BaseModel):
     batch: int = Field(..., description="每批次参数数量", ge=1)
     seed: Optional[int] = Field(None, description="随机种子")
     prior_experiments: Optional[List[PriorExperiment]] = Field(None, description="先验实验数据")
-    sampling_method: Optional[Literal["sobol", "lhs", "uniform"]] = Field("sobol", description="采样方法（仅在没有先验数据时生效）")
+    sampling_method: Optional[Literal["sobol", "lhs", "uniform"]] = Field(None, description="采样方法（未提供时默认使用lhs，仅在没有先验数据时生效）")
 
 # 定义响应模型
 class InitResponse(BaseModel):
@@ -711,10 +711,6 @@ def check_categorical_data(data: pd.DataFrame, parameters: List[str]) -> bool:
         if param in data.columns:
             # 检查是否为非数值类型
             if not pd.api.types.is_numeric_dtype(data[param]):
-                return True
-            # 检查数值类型但唯一值数量较少（可能是离散数值）
-            unique_count = data[param].nunique()
-            if unique_count <= 10:  # 如果唯一值数量少于等于10，认为是类别数据
                 return True
     return False
 
