@@ -663,8 +663,9 @@ async def update_optimization(request: UpdateRequest):
             optimizer.add_prior_experiments([experiment_result])
         
         # 获取下一组推荐参数
+        # get_next_parameters 返回 [(trial_index, parameters), ...]
         next_trials = optimizer.get_next_parameters(n=request.batch)
-        next_parameters = [params for params, _ in next_trials]
+        next_parameters = [params for _, params in next_trials]
         
         # 应用step约束（如果有）
         next_parameters = apply_step_constraints(next_parameters, step_info)
