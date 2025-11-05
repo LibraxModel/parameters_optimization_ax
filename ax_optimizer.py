@@ -50,7 +50,13 @@ from botorch.acquisition.multi_objective.parego import qLogNParEGO
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass
-
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+try:
+    from gpytorch.utils.warnings import NumericalWarning
+    warnings.filterwarnings("ignore", category=NumericalWarning)
+except ImportError:
+    pass
 @dataclass
 class ExperimentResult:
     """实验结果数据类"""
