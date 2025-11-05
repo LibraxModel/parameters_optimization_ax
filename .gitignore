@@ -153,6 +153,7 @@ analysis_outputs/
 api_analysis_output_*/
 simplified_interface_test/
 convenience_function_test/
+test/test_results.csv
 
 # Generated HTML files
 *.html
