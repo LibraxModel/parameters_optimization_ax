@@ -646,7 +646,7 @@ async def update_optimization(request: UpdateRequest):
         optimizer = BayesianOptimizer(
             search_space=search_space,
             optimization_config=optimization_config,
-            random_seed=request.seed if request.seed is not None else 42,
+            random_seed=request.seed ,
             surrogate_model_class=request.surrogate_model_class,
             kernel_class=request.kernel_class,
             kernel_options=request.kernel_options,
@@ -663,8 +663,9 @@ async def update_optimization(request: UpdateRequest):
             optimizer.add_prior_experiments([experiment_result])
         
         # 获取下一组推荐参数
+        # get_next_parameters 返回 [(trial_index, parameters), ...]
         next_trials = optimizer.get_next_parameters(n=request.batch)
-        next_parameters = [params for params, _ in next_trials]
+        next_parameters = [params for _, params in next_trials]
         
         # 应用step约束（如果有）
         next_parameters = apply_step_constraints(next_parameters, step_info)

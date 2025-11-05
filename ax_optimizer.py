@@ -1,13 +1,14 @@
 from typing import List, Dict, Any, Optional, Tuple, Type
 from ax.service.ax_client import AxClient, ObjectiveProperties
-from ax.generation_strategy.generation_strategy import GenerationStrategy, GenerationStep
-from ax.modelbridge.registry import Generators
+from ax.generation_strategy.generation_strategy import GenerationStrategy
+from ax.generation_strategy.generation_node import GenerationNode
+from ax.generation_strategy.generator_spec import GeneratorSpec
+from ax.adapter.registry import Generators
 from ax.core.objective import ScalarizedObjective, MultiObjective, Objective
 from ax.core.metric import Metric
 
-# 新增导入以支持自定义代理模型、核函数和采集函数
-from ax.models.torch.botorch_modular.surrogate import SurrogateSpec, ModelConfig
-from ax.models.torch.botorch_modular.acquisition import Acquisition
+# 新增导入以支持自定义代理模型、核函数和采集函数 (Ax 1.1.2 新路径)
+from ax.generators.torch.botorch_modular.surrogate import SurrogateSpec, ModelConfig
 from botorch.models import (
     SingleTaskGP, MultiTaskGP, KroneckerMultiTaskGP, 
     MixedSingleTaskGP, SingleTaskMultiFidelityGP,
@@ -49,7 +50,13 @@ from botorch.acquisition.multi_objective.parego import qLogNParEGO
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass
-
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+try:
+    from gpytorch.utils.warnings import NumericalWarning
+    warnings.filterwarnings("ignore", category=NumericalWarning)
+except ImportError:
+    pass
 @dataclass
 class ExperimentResult:
     """实验结果数据类"""
@@ -206,15 +213,20 @@ class BayesianOptimizer:
                 model_kwargs["acquisition_options"] = {}
             model_kwargs["acquisition_options"].update(acquisition_function_options)
         
+        # Ax 1.1.2 新 API: 使用 GenerationNode 和 GeneratorSpec
+        generator_spec = GeneratorSpec(
+            generator_enum=Generators.BOTORCH_MODULAR,
+            model_kwargs=model_kwargs if model_kwargs else None
+        )
+        
+        botorch_node = GenerationNode(
+            node_name="BoTorchModular",
+            generator_specs=[generator_spec],
+        )
+        
         gs = GenerationStrategy(
             name="BOTORCH_MODULAR",
-            steps=[
-                GenerationStep(
-                    model=Generators.BOTORCH_MODULAR,
-                    num_trials=-1,  # -1表示无限次数
-                    model_kwargs=model_kwargs if model_kwargs else None
-                ),
-            ]
+            nodes=[botorch_node]
         )
         
         self.ax_client = AxClient(
@@ -315,7 +327,7 @@ class BayesianOptimizer:
                 metadata=exp.metadata
             )
     
-    def get_next_parameters(self, n: int = 1) -> List[Tuple[Dict[str, Any], int]]:
+    def get_next_parameters(self, n: int = 1) -> List[Tuple[int, Dict[str, Any]]]:
         """
         获取下一组或多组建议的参数配置
         
@@ -323,15 +335,14 @@ class BayesianOptimizer:
             n: 需要生成的参数组数，默认为1
             
         Returns:
-            List of (parameters, trial_index) tuples:
-            - parameters: 参数配置字典
+            List of (trial_index, parameters) tuples:
             - trial_index: 实验索引
+            - parameters: 参数配置字典
         """
         self.trial_count += n
-        results = []
-        for _ in range(n):
-            parameters, trial_index = self.ax_client.get_next_trial()
-            results.append((parameters, trial_index))
+        # Ax 1.1.2: get_next_trials 返回元组 (dict[int, dict], bool)
+        trials_dict, _ = self.ax_client.get_next_trials(max_trials=n)
+        results = [(trial_index, parameters) for trial_index, parameters in trials_dict.items()]
         return results
     
     def update_experiment(self, 
@@ -582,7 +593,7 @@ def test_optimizer():
     # 模拟优化过程
     # 一次性获取3组参数
     next_trials = optimizer.get_next_parameters(n=3)
-    for i, (parameters, trial_index) in enumerate(next_trials):
+    for i, (trial_index, parameters) in enumerate(next_trials):
         print(f"\n第 {i+1} 次实验参数：")
         print(parameters)
         
@@ -652,7 +663,7 @@ def test_optimizer():
     
     # 运行几次试验
     next_trials = custom_optimizer.get_next_parameters(n=2)
-    for i, (parameters, trial_index) in enumerate(next_trials):
+    for i, (trial_index, parameters) in enumerate(next_trials):
         print(f"\n自定义配置 - 第 {i+1} 次实验参数：")
         print(parameters)
         
@@ -677,7 +688,7 @@ def test_optimizer():
     
     # 运行几次试验
     next_trials = acquisition_optimizer.get_next_parameters(n=2)
-    for i, (parameters, trial_index) in enumerate(next_trials):
+    for i, (trial_index, parameters) in enumerate(next_trials):
         print(f"\n自定义采集函数 - 第 {i+1} 次实验参数：")
         print(parameters)
         
@@ -932,43 +943,6 @@ def get_available_models_kernels_and_acquisitions():
     
     return models_info
 
-def print_configuration_guide():
-    """打印代理模型、核函数和采集函数的配置指南"""
-    info = get_available_models_kernels_and_acquisitions()
-    
-    print("🔧 Ax优化器 - 代理模型、核函数和采集函数配置指南")
-    print("=" * 70)
-    
-    for category, items in info.items():
-        print(f"\n📋 {category}")
-        print("-" * 40)
-        
-        for name, details in items.items():
-            print(f"\n🔸 {name}")
-            for key, value in details.items():
-                print(f"   {key}: {value}")
-    
-    print("\n" + "=" * 70)
-    print("💡 使用示例:")
-    print("optimizer = BayesianOptimizer(")
-    print("    search_space=search_space,")
-    print("    optimization_config=optimization_config,")
-    print("    surrogate_model_class=SingleTaskGP,              # 选择代理模型")
-    print("    kernel_class=MaternKernel,                       # 选择核函数")
-    print("    kernel_options={'nu': 2.5},                     # 核函数参数")
-    print("    acquisition_function_class=qExpectedImprovement, # 选择采集函数")
-    print("    acquisition_function_options={}                 # 采集函数参数")
-    print(")")
-    
-    print("\n🎯 常用组合推荐:")
-    print("1. 单目标通用优化: SingleTaskGP + MaternKernel(nu=2.5) + qExpectedImprovement")
-    print("2. 单目标噪声环境: SingleTaskGP + RBFKernel + qNoisyExpectedImprovement")
-    print("3. 单目标探索重点: SingleTaskGP + MaternKernel + qUpperConfidenceBound(beta=0.1)")
-    print("4. 多目标优化: SingleTaskGP + MaternKernel + qExpectedHypervolumeImprovement")
-    print("5. 多目标噪声: SingleTaskGP + RBFKernel + qNoisyExpectedHypervolumeImprovement")
-    print("6. 高维稀疏: SaasFullyBayesianSingleTaskGP + MaternKernel + qLogExpectedImprovement")
-    print("7. 快速收敛: SingleTaskGP + RBFKernel + qKnowledgeGradient")
-    print("8. 全局搜索: SingleTaskGP + MaternKernel + qMaxValueEntropy")
 
 def test_single_objective_acquisition_functions():
     """
@@ -1072,7 +1046,7 @@ def test_single_objective_acquisition_functions():
             # 获取下一组参数
             next_trials = optimizer.get_next_parameters(n=2)
             
-            for j, (parameters, trial_index) in enumerate(next_trials, 1):
+            for j, (trial_index, parameters) in enumerate(next_trials, 1):
                 print(f"  试验 {j}: {parameters}")
                 
                 # 模拟实验结果
@@ -1194,7 +1168,7 @@ def test_multi_objective_acquisition_functions():
             # 获取下一组参数
             next_trials = optimizer.get_next_parameters(n=2)
             
-            for j, (parameters, trial_index) in enumerate(next_trials, 1):
+            for j, (trial_index, parameters) in enumerate(next_trials, 1):
                 print(f"  试验 {j}: {parameters}")
                 
                 # 模拟实验结果
@@ -1274,8 +1248,8 @@ def test_acquisition_function_parameters():
             optimizer.add_prior_experiments(initial_data)
             
             # 获取下一个试验点
-            next_trial = optimizer.get_next_parameters(n=1)[0]
-            params = next_trial[0]
+            # get_next_parameters 返回 [(trial_index, parameters), ...]
+            trial_index, params = optimizer.get_next_parameters(n=1)[0]
             
             print(f"    下一个试验点: x={params['x']:.3f}, y={params['y']:.3f}")
             print(f"    ✅ Beta={beta} 测试成功")
@@ -1315,8 +1289,8 @@ def test_acquisition_function_parameters():
             optimizer.add_prior_experiments(initial_data)
             
             # 获取下一个试验点
-            next_trial = optimizer.get_next_parameters(n=1)[0]
-            params = next_trial[0]
+            # get_next_parameters 返回 [(trial_index, parameters), ...]
+            trial_index, params = optimizer.get_next_parameters(n=1)[0]
             
             print(f"    下一个试验点: x={params['x']:.3f}, y={params['y']:.3f}")
             print(f"    ✅ Eta={eta} 测试成功")
@@ -1352,8 +1326,8 @@ def test_acquisition_function_parameters():
             optimizer.add_prior_experiments(initial_data)
             
             # 获取下一个试验点
-            next_trial = optimizer.get_next_parameters(n=1)[0]
-            params = next_trial[0]
+            # get_next_parameters 返回 [(trial_index, parameters), ...]
+            trial_index, params = optimizer.get_next_parameters(n=1)[0]
             
             print(f"    下一个试验点: x={params['x']:.3f}, y={params['y']:.3f}")
             print(f"    ✅ Num_fantasies={num_fantasies} 测试成功")
@@ -1362,12 +1336,7 @@ def test_acquisition_function_parameters():
             print(f"    ❌ Num_fantasies={num_fantasies} 测试失败: {e}")
 
 if __name__ == "__main__":
-    # 打印配置指南
-    print_configuration_guide()
-    print("\n" + "=" * 70)
-    print("🚀 运行采集函数测试用例:")
-    print("=" * 70)
-    
+
     # 运行不同的采集函数测试
     test_single_objective_acquisition_functions()
     test_multi_objective_acquisition_functions() 

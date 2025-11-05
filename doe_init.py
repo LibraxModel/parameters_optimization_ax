@@ -1,6 +1,8 @@
 from ax.service.ax_client import AxClient, ObjectiveProperties
-from ax.generation_strategy.generation_strategy import GenerationStrategy, GenerationStep
-from ax.modelbridge.registry import Generators  
+from ax.generation_strategy.generation_strategy import GenerationStrategy
+from ax.generation_strategy.generation_node import GenerationNode
+from ax.generation_strategy.generator_spec import GeneratorSpec
+from ax.adapter.registry import Generators  
 import pandas as pd
 import numpy as np
 from scipy.stats import qmc
@@ -23,7 +25,24 @@ def generate_sobol_parameters(search_space, num_points=10, seed=None, prior_expe
     返回:
         list: 包含num_points个参数字典的列表
     """
-    ax_client = AxClient(random_seed=seed)
+    # 强制只使用 Sobol generator，不切换到 BoTorch
+    # Ax 1.1.2 新 API: 使用 GenerationNode 和 GeneratorSpec
+    generator_spec = GeneratorSpec(
+        generator_enum=Generators.SOBOL,
+        model_kwargs={"seed": seed} if seed is not None else None
+    )
+    
+    sobol_node = GenerationNode(
+        node_name="Sobol",
+        generator_specs=[generator_spec],
+    )
+    
+    gs = GenerationStrategy(
+        name="SOBOL_ONLY",
+        nodes=[sobol_node]
+    )
+    
+    ax_client = AxClient(random_seed=seed, generation_strategy=gs)
     ax_client.create_experiment(
         name="experiment_design",
         parameters=search_space,
@@ -117,9 +136,19 @@ def generate_uniform_parameters(search_space, num_points=10, seed=None):
     """
     使用 Ax 的 Generators.UNIFORM 生成纯随机参数组合
     """
+    # Ax 1.1.2 新 API: 使用 GenerationNode 和 GeneratorSpec
+    generator_spec = GeneratorSpec(
+        generator_enum=Generators.UNIFORM
+    )
+    
+    uniform_node = GenerationNode(
+        node_name="Uniform",
+        generator_specs=[generator_spec],
+    )
+    
     gs = GenerationStrategy(
         name="UNIFORM_ONLY",
-        steps=[GenerationStep(model=Generators.UNIFORM, num_trials=-1)]
+        nodes=[uniform_node]
     )
 
     ax_client = AxClient(random_seed=seed, generation_strategy=gs)
