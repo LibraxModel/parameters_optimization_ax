@@ -57,6 +57,15 @@ try:
     warnings.filterwarnings("ignore", category=NumericalWarning)
 except ImportError:
     pass
+# 抑制 botorch 的数值警告和优化警告
+
+from botorch.exceptions.warnings import NumericsWarning, OptimizationWarning
+warnings.filterwarnings("ignore", category=NumericsWarning)
+warnings.filterwarnings("ignore", category=OptimizationWarning)
+
+# 抑制 MapKeyToFloat 相关的 UserWarning
+warnings.filterwarnings("ignore", message=".*MapKeyToFloat.*")
+
 @dataclass
 class ExperimentResult:
     """实验结果数据类"""
