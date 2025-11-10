@@ -18,29 +18,15 @@ import time
 import copy
 sys.path.insert(0, '/root/sxw/edit')
 
-# 重新导入模块，确保使用最新代码（如果在 notebook 中运行）
-try:
-    import importlib
-    if 'LLINBO_agent' in sys.modules:
-        importlib.reload(sys.modules['LLINBO_agent'])
-        print("🔄 重新加载 LLINBO_agent 模块...")
-except Exception as e:
-    print(f"⚠️ 重新加载模块失败: {e}")
-
 from LLINBO_agent import (
     ProblemContext, Parameter, PriorExperiment, 
     LLMConfig, LLINBOAgent
 )
 
-# 检查环境变量
-if not os.getenv("OPENAI_API_KEY"):
-    print("⚠️ 警告: 未设置 OPENAI_API_KEY 环境变量")
-    print("请设置环境变量: export OPENAI_API_KEY='your-api-key'")
-    print("或在代码中设置: os.environ['OPENAI_API_KEY'] = 'your-api-key'")
-
-# 可选：设置代理（如果需要）
-# os.environ.setdefault("HTTP_PROXY", "http://127.0.0.1:7890")
-# os.environ.setdefault("HTTPS_PROXY", "http://127.0.0.1:7890")
+# 设置环境变量
+os.environ.setdefault("OPENAI_API_KEY", "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")
+os.environ.setdefault("HTTP_PROXY", "http://127.0.0.1:7890")
+os.environ.setdefault("HTTPS_PROXY", "http://127.0.0.1:7890")
 
 print("✅ 库导入完成")
 
@@ -367,23 +353,6 @@ print("✅ LLINBO Agent 初始化完成")
 
 # %% [markdown]
 # ## 7. 生成优化建议
-
-# %% [markdown]
-# **注意**：如果修改了 `LLINBO_agent.py`，请先运行下面的单元格重新导入模块
-
-# %%
-# 重新导入模块，确保使用最新代码
-try:
-    import importlib
-    if 'LLINBO_agent' in sys.modules:
-        importlib.reload(sys.modules['LLINBO_agent'])
-        print("🔄 重新加载 LLINBO_agent 模块...")
-        # 重新导入类
-        from LLINBO_agent import LLINBOAgent
-        # 重新创建 agent（如果需要）
-        # agent = LLINBOAgent(...)
-except Exception as e:
-    print(f"⚠️ 重新加载模块失败: {e}")
 
 # %%
 print("\n🎯 生成优化建议...")
