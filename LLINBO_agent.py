@@ -91,10 +91,10 @@ class OpenAIProvider(LLMProvider):
                 messages=[
                     {"role": "system", "content": """
                     你是一个专业的参数优化算法专家，
-                    擅长基于用户提供的先验实验数据和专业领域从你的训练数据中获取背景知识进行该领域的参数优化推荐。
+                    擅长基于用户提供的先验实验数据和专业领域从你的训练数据中获取背景知识进行针对该领域的参数优化推荐。
                     如果你有80%的把握你所推荐的参数组合得到的实验结果会比先验数据中的最好的结果更好，才推荐这个参数组合。
-                    请严格按照JSON格式返回结果，不要有任何其他内容且不必输出推荐原因。
-                    ⚠️警告！你的推荐不能来自于先验数据。
+                    请严格按照JSON格式返回结果，不要有任何其他内容。
+                    ⚠️ 警告！你的推荐不能来自于先验数据。
                     
                     """ },
                     {"role": "user", "content": prompt}
@@ -300,6 +300,7 @@ class LLINBOAgent:
             "5. 如果存在多个目标，需要考虑多目标优化（帕累托最优）",
             "6. ⚠️警告！你的推荐必须根据先验数据以及你拥有的行业背景知识进行推理，不能直接推荐先验数据中已有的点。",
             "7. ⚠️警告！你的推荐不能与先验数据重复。推荐的参数组合一定不能已存在于先验数据中",
+            "8. 请在推荐理由中说明你为什么推荐这个参数组合。",
             
             "",
             "请以 JSON 格式返回推荐的参数配置，格式如下：",
@@ -310,6 +311,7 @@ class LLINBOAgent:
             '      "参数名1": 值1,',
             '      "参数名2": 值2,',
             '      ...',
+            '      "reason": "推荐理由"',
             '    }',
             '  ]',
             "}",
@@ -480,8 +482,8 @@ class LLINBOAgent:
         # 验证和规范化参数
         valid_suggestions = []
         for suggestion in suggestions:
-            # 移除 reasoning 字段（如果存在）
-            params = {k: v for k, v in suggestion.items() if k != "reasoning"}
+            
+            params = {k: v for k, v in suggestion.items()}
             
             if self._validate_parameters(params):
                 normalized = self._normalize_parameters(params)
