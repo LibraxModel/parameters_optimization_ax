@@ -596,7 +596,7 @@ async def initialize_optimization(request: InitRequest):
             )
         else:
             # 没有先验数据时，使用用户指定的采样方法
-            sampling_method = request.sampling_method or "lhs"
+            sampling_method = request.sampling_method or "sobol"
             
             if sampling_method == "sobol":
                 params_list = generate_sobol_parameters(search_space, num_points=request.batch, seed=request.seed)
