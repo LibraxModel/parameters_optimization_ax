@@ -358,7 +358,7 @@ def main():
 
 if __name__ == "__main__":
     # 设置环境变量
-    os.environ.setdefault("OPENAI_API_KEY", "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")
+    os.environ.setdefault("OPENAI_API_KEY", "YOUR_API_KEY_HERE")
     os.environ.setdefault("HTTP_PROXY", "http://127.0.0.1:7890")
     os.environ.setdefault("HTTPS_PROXY", "http://127.0.0.1:7890")
     
