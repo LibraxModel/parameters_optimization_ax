@@ -1,10 +1,11 @@
-# 参数优化 API - 基于 Ax 框架的贝叶斯优化
+# 参数优化 API - 基于 Ax 框架的贝叶斯优化与大模型调参
 
-一个基于 Ax 框架的贝叶斯参数优化 API，支持自定义代理模型、核函数和采集函数，适用于各种机器学习超参数优化和实验设计场景。
+一个强大的参数优化框架，支持传统贝叶斯优化和基于大模型的智能调参方法。
 
 ## 🚀 主要特性
 
-- **多种初始化采样方式**: 支持 Sobol、LHS、Uniform 采样
+### 传统贝叶斯优化（基于 Ax 框架）
+- **多种初始化采样方式**: Sobol、LHS、Uniform 采样
 - **贝叶斯优化**: 基于历史数据的智能参数推荐
 - **自定义代理模型**: 支持 SingleTaskGP、MultiTaskGP 等多种高斯过程模型
 - **自定义核函数**: 支持 MaternKernel、RBFKernel 等多种核函数
@@ -13,6 +14,208 @@
 - **多目标优化**: 支持帕累托优化和权重优化
 - **实验数据分析**: 生成多种可视化图表（并行坐标图、特征重要性图、交叉验证图、切片图、等高线图）
 - **RESTful API**: 提供简洁的 HTTP 接口
+
+### 🆕 大模型调参方法（LLINBO）
+
+**LLINBO (Large Language Model for Bayesian Optimization)** 是一种创新的参数优化方法，利用大语言模型的推理能力进行参数推荐。
+
+#### 核心优势
+
+1. **领域知识融合**: 结合问题背景、行业知识和领域专业知识进行推理
+2. **先验数据理解**: 深度分析历史实验数据，识别模式和趋势
+3. **智能探索策略**: 在探索（exploration）和利用（exploitation）之间智能平衡
+4. **多目标优化**: 支持多目标优化，考虑帕累托最优解
+5. **可解释性**: 每个推荐都附带详细的推荐理由
+
+#### 工作原理
+
+1. **问题理解**: 接收优化问题描述、行业领域、领域知识等背景信息
+2. **参数空间定义**: 支持连续参数（range）和离散参数（choice）
+3. **先验数据分析**: 分析历史实验数据，提取有效信息
+4. **大模型推理**: 使用大模型基于背景知识和先验数据进行参数推荐
+5. **参数验证**: 自动验证推荐参数是否符合参数空间定义
+
+#### 使用示例
+
+```python
+from LLINBO_agent import LLINBOAgent, ProblemContext, Parameter, PriorExperiment, LLMConfig
+
+# 1. 定义问题背景
+problem_context = ProblemContext(
+    problem_description="优化化学反应条件以提高产率和纯度",
+    industry="化学合成",
+    domain_knowledge="温度对反应速率有显著影响，催化剂选择影响选择性",
+    optimization_goals=["最大化产率", "最大化纯度", "最小化副产物"]
+)
+
+# 2. 定义参数空间
+parameters = [
+    Parameter(
+        name="temperature",
+        type="range",
+        bounds=[25, 100],
+        value_type="float",
+        description="反应温度",
+        unit="°C"
+    ),
+    Parameter(
+        name="catalyst",
+        type="choice",
+        values=["A", "B", "C", "D"],
+        description="催化剂类型"
+    ),
+    Parameter(
+        name="reaction_time",
+        type="range",
+        bounds=[30, 180],
+        value_type="int",
+        description="反应时间",
+        unit="分钟"
+    )
+]
+
+# 3. 定义优化目标
+objectives = {
+    "yield": {"minimize": False},
+    "purity": {"minimize": False},
+    "side_product": {"minimize": True}
+}
+
+# 4. 准备先验实验数据（可选）
+prior_experiments = [
+    PriorExperiment(
+        parameters={"temperature": 50, "catalyst": "A", "reaction_time": 60},
+        metrics={"yield": 75, "purity": 85, "side_product": 5}
+    ),
+    PriorExperiment(
+        parameters={"temperature": 80, "catalyst": "B", "reaction_time": 120},
+        metrics={"yield": 82, "purity": 88, "side_product": 3}
+    )
+]
+
+# 5. 配置大模型（可选，默认使用 GPT-4o）
+llm_config = LLMConfig(
+    model_name="gpt-4",
+    api_key="your-api-key",  # 可选
+    base_url=None  # 可选，使用自定义 API 端点
+)
+
+# 6. 初始化 LLINBO Agent
+agent = LLINBOAgent(
+    problem_context=problem_context,
+    parameters=parameters,
+    objectives=objectives,
+    llm_config=llm_config,
+    prior_experiments=prior_experiments
+)
+
+# 7. 获取参数推荐
+suggestions = agent.suggest_parameters(num_suggestions=3)
+for suggestion in suggestions:
+    print(f"推荐参数: {suggestion}")
+```
+
+### 🆕 融合优化方法（Hybrid Optimizer）
+
+**Hybrid Optimizer** 结合了传统贝叶斯优化（GP）和大模型（LLM）的优势，通过 GP 的采集函数评估 LLM 的推荐，实现更智能的参数优化。
+
+#### 核心策略
+
+1. **LLM 生成推荐**: 使用大模型基于领域知识和先验数据生成候选参数
+2. **GP 评估筛选**: 使用高斯过程的采集函数评估 LLM 推荐的点
+3. **动态阈值控制**: 基于预测标准差动态调整接受阈值
+4. **智能补充**: 如果 LLM 推荐不足，使用 GP 推荐补充
+
+#### 工作原理
+
+```
+1. 获取 GP 推荐的最佳点及其采集函数值
+2. 使用 LLM 生成多个候选推荐点
+3. 使用 GP 采集函数评估每个 LLM 推荐点
+4. 计算 LLM 点与 GP 最佳点的采集函数差值
+5. 使用动态阈值筛选"不过分差"的 LLM 推荐点
+6. 如果还需要更多推荐，使用 GP 推荐补充
+```
+
+#### 使用示例
+
+```python
+from hybrid_optimizer import HybridOptimizer
+from LLINBO_agent import ProblemContext, Parameter, LLMConfig
+from ax_optimizer import BayesianOptimizer
+
+# 1. 定义 LLM 参数空间
+llm_parameters = [
+    Parameter(name="temperature", type="range", bounds=[25, 100]),
+    Parameter(name="catalyst", type="choice", values=["A", "B", "C", "D"]),
+    Parameter(name="reaction_time", type="range", bounds=[30, 180], value_type="int")
+]
+
+# 2. 定义 GP 参数空间（Ax 格式）
+gp_search_space = [
+    {"name": "temperature", "type": "range", "bounds": [25.0, 100.0]},
+    {"name": "catalyst", "type": "choice", "values": ["A", "B", "C", "D"]},
+    {"name": "reaction_time", "type": "range", "bounds": [30.0, 180.0]}
+]
+
+# 3. 定义优化配置
+optimization_config = {
+    "objectives": {
+        "yield": {"minimize": False},
+        "purity": {"minimize": False}
+    }
+}
+
+# 4. 定义问题背景
+problem_context = ProblemContext(
+    problem_description="优化化学反应条件",
+    industry="化学合成"
+)
+
+# 5. 初始化融合优化器
+hybrid_optimizer = HybridOptimizer(
+    llm_parameters=llm_parameters,
+    gp_search_space=gp_search_space,
+    optimization_config=optimization_config,
+    problem_context=problem_context,
+    llm_config=LLMConfig(model_name="gpt-4"),
+    # GP 配置
+    gp_surrogate_model_class="SingleTaskGP",
+    gp_kernel_class="MaternKernel",
+    gp_kernel_options={"nu": 2.5},
+    gp_acquisition_function_class="qExpectedHypervolumeImprovement",
+    # 融合策略参数
+    acquisition_threshold=0.1,  # 固定阈值（当 use_dynamic_threshold=False 时使用）
+    use_dynamic_threshold=True,  # 使用动态阈值
+    threshold_multiplier=1.0  # 动态阈值倍数
+)
+
+# 6. 添加历史实验数据
+hybrid_optimizer.update_experiment(
+    parameters={"temperature": 50, "catalyst": "A", "reaction_time": 60},
+    metrics={"yield": 75, "purity": 85}
+)
+
+# 7. 获取融合推荐
+suggestions = hybrid_optimizer.suggest_parameters(
+    num_suggestions=3,
+    use_llm=True,
+    use_gp=True,
+    print_details=True
+)
+
+# 8. 更新实验结果
+for suggestion in suggestions:
+    # 执行实验...
+    metrics = run_experiment(suggestion)
+    hybrid_optimizer.update_experiment(suggestion, metrics)
+```
+
+#### 融合策略参数说明
+
+- **`acquisition_threshold`**: 固定阈值，当 `use_dynamic_threshold=False` 时使用
+- **`use_dynamic_threshold`**: 是否使用基于预测标准差的动态阈值（推荐）
+- **`threshold_multiplier`**: 动态阈值倍数，阈值 = `threshold_multiplier * 预测标准差`
 
 ## 📦 安装
 
@@ -27,9 +230,6 @@ conda activate ax_env
 
 # 安装依赖
 pip install -r requirements.txt
-
-# 或者手动安装核心依赖
-# pip install ax-platform botorch gpytorch fastapi uvicorn pandas numpy
 ```
 
 ## 🏃‍♂️ 快速开始
@@ -42,776 +242,82 @@ python api_parameter_optimizer_v3.py
 
 服务器将在 `http://localhost:3320` 启动。
 
-### 基础使用示例
+### 传统贝叶斯优化使用
 
-#### 1. 初始化优化（传统采样）
-
-```python
-import requests
-
-# 初始化请求
-init_request = {
-    "parameter_space": [
-        {
-            "name": "learning_rate",
-            "type": "range",
-            "values": [0.001, 0.1]
-        },
-        {
-            "name": "batch_size",
-            "type": "choice",
-            "values": [32, 64, 128, 256]
-        }
-    ],
-    "objectives": ["accuracy"],
-    "batch": 5,
-    "seed": 42,
-    "sampling_method": "sobol"
-}
-
-response = requests.post("http://localhost:3320/init", json=init_request)
-print(response.json())
-```
-
-#### 2. 贝叶斯优化（自定义配置）
-
-```python
-# 贝叶斯优化请求
-update_request = {
-    "parameter_space": [
-        {
-            "name": "learning_rate",
-            "type": "range",
-            "values": [0.001, 0.1]
-        },
-        {
-            "name": "batch_size",
-            "type": "choice",
-            "values": [32, 64, 128, 256]
-        }
-    ],
-    "objectives": {
-        "accuracy": {"minimize": False},
-        "training_time": {"minimize": True}
-    },
-    "completed_experiments": [
-        {
-            "parameters": {
-                "learning_rate": 0.01,
-                "batch_size": 64
-            },
-            "metrics": {
-                "accuracy": 0.85,
-                "training_time": 120
-            }
-        }
-    ],
-    "batch": 3,
-    "seed": 42,
-    "surrogate_model_class": "SingleTaskGP",
-    "kernel_class": "MaternKernel",
-    "kernel_options": {"nu": 2.5},
-    "acquisition_function_class": "qExpectedHypervolumeImprovement",
-    "acquisition_function_options": {}
-}
-
-response = requests.post("http://localhost:3320/update", json=update_request)
-print(response.json())
-```
+详见原有文档，支持 `/init` 和 `/update` 接口进行传统贝叶斯优化。
 
 ## 📚 API 接口文档
 
-### 基础端点
+### 大模型调参相关接口
 
-#### GET `/`
-获取 API 信息和使用说明
+#### LLINBO Agent 使用
 
-#### GET `/health`
-健康检查端点
+LLINBO Agent 通过 Python 代码直接使用, HTTP 接口暂未开发。使用方式见上方示例。
 
-#### GET `/available_classes`
-获取所有可用的代理模型、核函数和采集函数列表
+#### 融合优化器使用
 
-### 核心接口
+融合优化器同样通过 Python 代码直接使用，使用方式见上方示例。
+
+### 传统优化接口（简要）
 
 #### POST `/init`
-初始化优化，使用传统采样方法
-
-**请求参数:**
-- `parameter_space`: 参数空间定义
-- `objectives`: 优化目标列表
-- `batch`: 每批次参数数量
-- `seed`: 随机种子（可选）
-- `prior_experiments`: 先验实验数据（可选）
-- `sampling_method`: 采样方法（"sobol", "lhs", "uniform"）
+初始化优化，使用传统采样方法（Sobol、LHS、Uniform）
 
 #### POST `/update`
 贝叶斯优化接口，基于历史数据推荐参数
 
-**请求参数:**
-- `parameter_space`: 参数空间定义
-- `objectives`: 优化目标配置
-- `completed_experiments`: 已完成的实验结果
-- `batch`: 下一批次参数数量
-- `use_weights`: 是否使用权重优化（可选）
-- `objective_weights`: 目标权重（可选）
-- `additional_metrics`: 额外跟踪指标（可选）
-- `seed`: 随机种子（可选）
-- `surrogate_model_class`: 代理模型类名（可选）
-- `kernel_class`: 核函数类名（可选）
-- `kernel_options`: 核函数参数（可选）
-- `acquisition_function_class`: 采集函数类名（可选）
-- `acquisition_function_options`: 采集函数参数（可选）
-
 #### POST `/analysis`
-实验数据分析接口，生成基础可视化图表
+实验数据分析接口，生成可视化图表
 
-**请求参数:**
-- `file`: 实验数据CSV文件
-- `parameters`: 参数列名，用逗号分隔
-- `objectives`: 目标列名，用逗号分隔
-- `parameter_space`: 参数空间配置，JSON格式字符串
-- `surrogate_model_class`: 代理模型类名（可选）
-- `kernel_class`: 核函数类名（可选）
-- `kernel_options`: 核函数参数，JSON格式字符串（可选）
+详细接口文档请参考代码注释。
 
-**生成图表:**
-- 并行坐标图（1个）
-- 特征重要性图（每个目标1个）
-- 交叉验证图（每个目标1个）
+## 🎯 方法选择建议
 
-#### POST `/analysis/slice`
-生成单个切片图，展示指定参数对指定目标的影响
+### 何时使用 LLINBO（大模型调参）
 
-**请求参数:**
-- `file`: 实验数据CSV文件
-- `parameter`: 要分析的参数名称
-- `objective`: 要分析的目标名称
-- `parameter_space`: 参数空间配置，JSON格式字符串
-- `surrogate_model_class`: 代理模型类名（可选）
-- `kernel_class`: 核函数类名（可选）
-- `kernel_options`: 核函数参数，JSON格式字符串（可选）
+- ✅ 有丰富的领域知识和背景信息
+- ✅ 参数空间较小，需要快速获得高质量推荐
+- ✅ 需要可解释的推荐理由
+- ✅ 先验数据较少，需要利用领域知识
 
-**返回:**
-- 单个切片图的查看链接
-- 只生成用户指定的参数图表
+### 何时使用 Hybrid Optimizer（融合优化）
 
-#### POST `/analysis/contour`
-生成单个等高线图，展示指定参数对组合对指定目标的影响
+- ✅ 需要结合领域知识和数据驱动方法
+- ✅ 希望 LLM 推荐经过 GP 验证
+- ✅ 需要平衡探索和利用
+- ✅ 参数空间较大，需要更稳健的推荐
 
-**请求参数:**
-- `file`: 实验数据CSV文件
-- `parameter1`: 第一个参数名称
-- `parameter2`: 第二个参数名称
-- `objective`: 要分析的目标名称
-- `parameter_space`: 参数空间配置，JSON格式字符串
-- `surrogate_model_class`: 代理模型类名（可选）
-- `kernel_class`: 核函数类名（可选）
-- `kernel_options`: 核函数参数，JSON格式字符串（可选）
+### 何时使用传统贝叶斯优化
 
-**返回:**
-- 单个等高线图的查看链接
-- 只生成用户指定的参数对图表
+- ✅ 有大量历史实验数据
+- ✅ 参数空间较大，需要系统化探索
+- ✅ 不需要领域知识，纯数据驱动
+- ✅ 需要精确的数学优化方法
 
-#### GET `/chart/{file_id}`
-查看生成的图表（在浏览器中渲染）
+## 📊 性能对比
 
-**参数:**
-- `file_id`: 图表文件ID（从分析接口返回）
+| 方法 | 优势 | 适用场景 |
+|------|------|----------|
+| **LLINBO** | 利用领域知识、可解释性强、快速推荐 | 小参数空间、有领域知识、先验数据少 |
+| **Hybrid** | 结合知识和数据、稳健可靠 | 中等参数空间、需要平衡探索和利用 |
+| **传统 GP** | 数学严谨、系统化探索、适合大数据 | 大参数空间、有丰富历史数据 |
 
-**返回:**
-- HTML格式的图表内容，可直接在浏览器中查看
+## 🔍 技术细节
 
-## 🔧 可配置组件详解
+### LLINBO Agent 技术特点
 
-### 代理模型 (Surrogate Models)
+- **提示词工程**: 精心设计的提示词，引导大模型进行参数优化推理
+- **参数验证**: 自动验证推荐参数是否符合参数空间定义
+- **类型转换**: 自动处理参数类型转换（int/float/str）
+- **JSON 解析**: 智能解析大模型返回的 JSON 格式响应
 
-| 模型名称 | 描述 | 适用场景 |
-|---------|------|----------|
-| `SingleTaskGP` | 单任务高斯过程 | 单目标优化，Ax 默认推荐 |
-| `MultiTaskGP` | 多任务高斯过程 | 多个相关任务，需要任务特征 |
-| `KroneckerMultiTaskGP` | Kronecker 结构多任务 GP | 结构化多任务，计算效率高 |
-| `MixedSingleTaskGP` | 混合变量类型 GP | 同时包含连续和分类变量 |
-| `SingleTaskMultiFidelityGP` | 多保真度单任务 GP | 有多个评估精度级别 |
-| `SaasFullyBayesianSingleTaskGP` | 全贝叶斯单任务 GP | 高维问题，需要特征选择 |
-| `SaasFullyBayesianMultiTaskGP` | 全贝叶斯多任务 GP | 高维多任务问题 |
-| `HigherOrderGP` | 高阶高斯过程 | 存在复杂变量交互的问题 |
-| `SingleTaskVariationalGP` | 变分推断 GP | 大规模数据集优化 |
+### Hybrid Optimizer 技术特点
 
-**注意**: `SaasFullyBayesianSingleTaskGP`、`SaasFullyBayesianMultiTaskGP` 和 `HigherOrderGP` 不支持自定义核函数，将自动忽略 `kernel_class` 和 `kernel_options` 参数。
+- **动态阈值**: 基于预测标准差动态调整接受阈值，适应不同不确定性
+- **采集函数评估**: 使用 GP 的采集函数评估 LLM 推荐的质量
+- **去重机制**: 自动检测和去除重复的参数推荐
+- **特殊策略**: 当 GP 信心不足时，更信任 LLM 推荐
 
-### 核函数 (Kernels)
 
-| 核函数名称 | 描述 | 参数 | 适用场景 |
-|-----------|------|------|----------|
-| `RBFKernel` | 径向基函数核（高斯核） | `lengthscale` | 光滑函数，大多数工程问题 |
-| `MaternKernel` | Matérn 核 | `nu` (0.5, 1.5, 2.5) | 不同平滑度需求，工程优化常用 |
-| `LinearKernel` | 线性核 | `variance` (0.1,0.5,1.0,2.0) | 线性或近似线性问题 |
-| `PolynomialKernel` | 多项式核 | `power` (1,2,3,4) | 多项式关系的问题 |
-| `PeriodicKernel` | 周期核 | `period`, `lengthscale` | 具有周期性的优化问题 |
-| `SpectralMixtureKernel` | 谱混合核 | `num_mixtures` | 复杂的频域特征 |
-| `RQKernel` | 有理二次核 | `alpha`, `lengthscale` | 中等复杂度的平滑函数 |
-| `CosineKernel` | 余弦核 | `period` | 余弦型周期模式 |
-| `ScaleKernel` | 缩放核 | `base_kernel` (字符串), `outputscale` | 需要调整输出尺度的情况 |
-| `AdditiveKernel` | 加性核 | `kern1`, `kern2` | 需要组合不同类型相关性 |
-| `ProductKernel` | 乘积核 | `kern1`, `kern2` | 需要核函数乘积的场景 |
 
-### 采集函数 (Acquisition Functions)
 
-#### 单目标采集函数
-
-| 采集函数名称 | 描述 | 参数 | 适用场景 |
-|-------------|------|------|----------|
-| `qExpectedImprovement` | 期望改进（批量版本） | `eta` (约束平滑度，默认1e-3) | 单目标优化，均衡的探索-开发策略 |
-| `qNoisyExpectedImprovement` | 噪声期望改进 | `eta` (约束平滑度，默认1e-3) | 单目标优化，存在观测噪声 |
-| `qUpperConfidenceBound` | 上置信界 | `beta` (探索权重，默认0.2) | 单目标优化，需要控制探索-开发平衡 |
-| `qKnowledgeGradient` | 知识梯度 | `num_fantasies` (幻想样本数，默认64) | 单目标优化，重视信息获取 |
-| `qLogExpectedImprovement` | 对数期望改进 | 无特殊参数 | 单目标优化，数值稳定性更好 |
-| `qMaxValueEntropy` | 最大值熵搜索 | `num_mv_samples` (最大值样本数，默认10) | 单目标优化，高效的全局搜索 |
-| `ExpectedImprovement` | 经典期望改进（解析版本） | 无特殊参数 | 单目标优化，计算高效 |
-| `UpperConfidenceBound` | 经典上置信界（解析版本） | `beta` (探索权重) | 单目标优化，计算高效 |
-| `PosteriorMean` | 后验均值 | 无特殊参数 | 单目标优化，纯开发策略 |
-
-#### 多目标采集函数
-
-| 采集函数名称 | 描述 | 参数 | 适用场景 |
-|-------------|------|------|----------|
-| `qExpectedHypervolumeImprovement` | 期望超体积改进 | `ref_point` (参考点，可选) | 多目标优化，直接优化帕累托前沿 |
-| `qNoisyExpectedHypervolumeImprovement` | 噪声期望超体积改进 | `ref_point` (参考点，可选) | 多目标优化，存在观测噪声 |
-| `qLogExpectedHypervolumeImprovement` | 对数期望超体积改进 | `ref_point` (参考点，可选) | 多目标优化，数值稳定（推荐） |
-| `qLogNoisyExpectedHypervolumeImprovement` | 对数噪声期望超体积改进 | `ref_point` (参考点，可选) | 多目标优化，数值稳定 |
-| `qLogNParEGO` | ParEGO 的对数版本 | 无特殊参数 | 多目标优化，计算资源有限时 |
-
-## 🎯 使用示例
-
-### 示例 1: 机器学习超参数优化
-
-```python
-import requests
-
-# 定义超参数空间
-parameter_space = [
-    {
-        "name": "learning_rate",
-        "type": "range",
-        "values": [0.0001, 0.1]
-    },
-    {
-        "name": "batch_size",
-        "type": "choice",
-        "values": [16, 32, 64, 128]
-    },
-    {
-        "name": "dropout",
-        "type": "range",
-        "values": [0.1, 0.5]
-    },
-    {
-        "name": "optimizer",
-        "type": "choice",
-        "values": ["adam", "sgd", "rmsprop"]
-    }
-]
-
-# 贝叶斯优化配置
-optimization_request = {
-    "parameter_space": parameter_space,
-    "objectives": {
-        "validation_accuracy": {"minimize": False},
-        "training_time": {"minimize": True}
-    },
-    "completed_experiments": [
-        {
-            "parameters": {
-                "learning_rate": 0.01,
-                "batch_size": 32,
-                "dropout": 0.2,
-                "optimizer": "adam"
-            },
-            "metrics": {
-                "validation_accuracy": 0.85,
-                "training_time": 120
-            }
-        }
-    ],
-    "batch": 3,
-    "seed": 42,
-    "surrogate_model_class": "SingleTaskGP",
-    "kernel_class": "MaternKernel",
-    "kernel_options": {"nu": 2.5},
-    "acquisition_function_class": "qLogExpectedHypervolumeImprovement"
-}
-
-response = requests.post("http://localhost:3320/update", json=optimization_request)
-print(response.json())
-```
-
-### 示例 2: 化学反应条件优化
-
-```python
-# 化学反应优化
-reaction_optimization = {
-    "parameter_space": [
-        {
-            "name": "temperature",
-            "type": "range",
-            "values": [25, 100]
-        },
-        {
-            "name": "pressure",
-            "type": "range",
-            "values": [1, 10]
-        },
-        {
-            "name": "catalyst",
-            "type": "choice",
-            "values": ["A", "B", "C", "D"]
-        },
-        {
-            "name": "reaction_time",
-            "type": "range",
-            "values": [30, 180],
-            "step": 15
-        }
-    ],
-    "objectives": {
-        "yield": {"minimize": False},
-        "purity": {"minimize": False},
-        "cost": {"minimize": True}
-    },
-    "completed_experiments": [
-        {
-            "parameters": {
-                "temperature": 50,
-                "pressure": 5,
-                "catalyst": "A",
-                "reaction_time": 60
-            },
-            "metrics": {
-                "yield": 75,
-                "purity": 85,
-                "cost": 100
-            }
-        }
-    ],
-    "batch": 2,
-    "surrogate_model_class": "MultiTaskGP",
-    "kernel_class": "RBFKernel",
-    "acquisition_function_class": "qExpectedHypervolumeImprovement"
-}
-
-response = requests.post("http://localhost:3320/update", json=reaction_optimization)
-print(response.json())
-```
-
-### 示例 3: ScaleKernel配置
-
-```python
-# ScaleKernel配置（包装其他核函数）
-scale_kernel_config = {
-    "parameter_space": [
-        {
-            "name": "solvent",
-            "type": "choice",
-            "values": ["THF", "Toluene", "DMSO"]
-        },
-        {
-            "name": "catalyst",
-            "type": "choice", 
-            "values": ["Pd/C", "CuO", "None"]
-        },
-        {
-            "name": "temperature",
-            "type": "range",
-            "values": [-10, 25]
-        },
-        {
-            "name": "concentration",
-            "type": "range",
-            "values": [0.1, 1.0],
-            "step": 0.1
-        }
-    ],
-    "objectives": {
-        "yield": {"minimize": false},
-        "side_product": {"minimize": false}
-    },
-    "completed_experiments": [
-        {
-            "parameters": {
-                "solvent": "THF",
-                "catalyst": "Pd/C",
-                "temperature": -10,
-                "concentration": 0.1
-            },
-            "metrics": {
-                "yield": 72,
-                "side_product": 5
-            }
-        },
-        {
-            "parameters": {
-                "solvent": "Toluene",
-                "catalyst": "CuO",
-                "temperature": 0,
-                "concentration": 0.2
-            },
-            "metrics": {
-                "yield": 85,
-                "side_product": 3
-            }
-        }
-    ],
-    "batch": 3,
-    "seed": 42,
-    "surrogate_model_class": "SingleTaskGP",
-    "kernel_class": "ScaleKernel",
-    "kernel_options": {
-        "base_kernel": "MaternKernel",  # 基础核函数（字符串）
-        "outputscale": 2.0              # 输出缩放因子
-    },
-    "acquisition_function_class": "qLogExpectedHypervolumeImprovement",
-    "acquisition_function_options": {}
-}
-
-response = requests.post("http://localhost:3320/update", json=scale_kernel_config)
-print(response.json())
-```
-
-### 示例 4: 高探索性配置
-
-```python
-# 高探索性配置
-exploration_config = {
-    "parameter_space": [
-        {
-            "name": "x",
-            "type": "range",
-            "values": [-5, 5]
-        },
-        {
-            "name": "y",
-            "type": "range",
-            "values": [-5, 5]
-        }
-    ],
-    "objectives": {
-        "objective": {"minimize": True}
-    },
-    "completed_experiments": [
-        {
-            "parameters": {"x": 0, "y": 0},
-            "metrics": {"objective": 1.0}
-        }
-    ],
-    "batch": 3,
-    "kernel_class": "MaternKernel",
-    "kernel_options": {"nu": 0.5},  # 低平滑度，增加探索
-    "acquisition_function_class": "qUpperConfidenceBound",
-    "acquisition_function_options": {"beta": 0.5}  # 高探索权重
-}
-
-response = requests.post("http://localhost:3320/update", json=exploration_config)
-print(response.json())
-```
-
-### 示例 4: 实验数据分析
-
-#### 基础分析（生成所有基础图表）
-
-```python
-import requests
-import json
-
-# 准备分析请求
-analysis_request = {
-    'file': open('experiment_data.csv', 'rb'),
-    'parameters': 'solvent,catalyst,temperature,concentration',
-    'objectives': 'yield,side_product',
-    'parameter_space': json.dumps([
-        {
-            "name": "solvent",
-            "type": "choice",
-            "values": ["THF", "Toluene", "DMSO"]
-        },
-        {
-            "name": "catalyst",
-            "type": "choice",
-            "values": ["Pd/C", "CuO", "None"]
-        },
-        {
-            "name": "temperature",
-            "type": "range",
-            "values": [-10, 40]
-        },
-        {
-            "name": "concentration",
-            "type": "range",
-            "values": [0.1, 1.0]
-        }
-    ]),
-    'surrogate_model_class': 'SingleTaskGP',
-    'kernel_class': 'MaternKernel',
-    'kernel_options': json.dumps({"nu": 2.5})
-}
-
-# 发送分析请求
-files = {'file': analysis_request['file']}
-data = {k: v for k, v in analysis_request.items() if k != 'file'}
-
-response = requests.post('http://localhost:3320/analysis', files=files, data=data)
-result = response.json()
-
-print(f"分析结果: {result['message']}")
-print(f"生成的图表: {result['generated_plots']}")
-print(f"查看链接: {result['view_links']}")
-```
-
-#### 生成单个切片图
-
-```python
-# 生成温度对产率的切片图
-slice_request = {
-    'file': open('experiment_data.csv', 'rb'),
-    'parameter': 'temperature',
-    'objective': 'yield',
-    'parameter_space': json.dumps([
-        {
-            "name": "solvent",
-            "type": "choice",
-            "values": ["THF", "Toluene", "DMSO"]
-        },
-        {
-            "name": "catalyst",
-            "type": "choice",
-            "values": ["Pd/C", "CuO", "None"]
-        },
-        {
-            "name": "temperature",
-            "type": "range",
-            "values": [-10, 40]
-        },
-        {
-            "name": "concentration",
-            "type": "range",
-            "values": [0.1, 1.0]
-        }
-    ]),
-    'surrogate_model_class': 'SingleTaskGP',
-    'kernel_class': 'MaternKernel',
-    'kernel_options': json.dumps({"nu": 2.5})
-}
-
-files = {'file': slice_request['file']}
-data = {k: v for k, v in slice_request.items() if k != 'file'}
-
-response = requests.post('http://localhost:3320/analysis/slice', files=files, data=data)
-result = response.json()
-
-print(f"切片图生成结果: {result['message']}")
-print(f"图表名称: {result['plot_name']}")
-print(f"查看链接: {result['view_link']['url']}")
-```
-
-#### 生成单个等高线图
-
-```python
-# 生成温度和浓度对产率的等高线图
-contour_request = {
-    'file': open('experiment_data.csv', 'rb'),
-    'parameter1': 'temperature',
-    'parameter2': 'concentration',
-    'objective': 'yield',
-    'parameter_space': json.dumps([
-        {
-            "name": "solvent",
-            "type": "choice",
-            "values": ["THF", "Toluene", "DMSO"]
-        },
-        {
-            "name": "catalyst",
-            "type": "choice",
-            "values": ["Pd/C", "CuO", "None"]
-        },
-        {
-            "name": "temperature",
-            "type": "range",
-            "values": [-10, 40]
-        },
-        {
-            "name": "concentration",
-            "type": "range",
-            "values": [0.1, 1.0]
-        }
-    ]),
-    'surrogate_model_class': 'SingleTaskGP',
-    'kernel_class': 'MaternKernel',
-    'kernel_options': json.dumps({"nu": 2.5})
-}
-
-files = {'file': contour_request['file']}
-data = {k: v for k, v in contour_request.items() if k != 'file'}
-
-response = requests.post('http://localhost:3320/analysis/contour', files=files, data=data)
-result = response.json()
-
-print(f"等高线图生成结果: {result['message']}")
-print(f"图表名称: {result['plot_name']}")
-print(f"查看链接: {result['view_link']['url']}")
-```
-
-#### 查看图表
-
-```python
-# 获取图表查看链接后，可以直接在浏览器中打开
-chart_url = f"http://localhost:3320{result['view_link']['url']}"
-print(f"在浏览器中打开: {chart_url}")
-
-# 或者使用requests获取图表内容
-response = requests.get(chart_url)
-if response.status_code == 200:
-    # 保存为HTML文件
-    with open('chart.html', 'w', encoding='utf-8') as f:
-        f.write(response.text)
-    print("图表已保存为 chart.html")
-```
-
-## 🔍 常用配置组合推荐
-
-### 1. 单目标通用优化
-```python
-{
-    "surrogate_model_class": "SingleTaskGP",
-    "kernel_class": "MaternKernel",
-    "kernel_options": {"nu": 2.5},
-    "acquisition_function_class": "qExpectedImprovement"
-}
-```
-
-### 2. 单目标噪声环境
-```python
-{
-    "surrogate_model_class": "SingleTaskGP",
-    "kernel_class": "RBFKernel",
-    "acquisition_function_class": "qNoisyExpectedImprovement"
-}
-```
-
-### 3. 单目标探索重点
-```python
-{
-    "surrogate_model_class": "SingleTaskGP",
-    "kernel_class": "MaternKernel",
-    "acquisition_function_class": "qUpperConfidenceBound",
-    "acquisition_function_options": {"beta": 0.1}
-}
-```
-
-### 4. 多目标优化
-```python
-{
-    "surrogate_model_class": "SingleTaskGP",
-    "kernel_class": "MaternKernel",
-    "acquisition_function_class": "qLogExpectedHypervolumeImprovement"
-}
-```
-
-### 5. 高维稀疏问题
-```python
-{
-    "surrogate_model_class": "SaasFullyBayesianSingleTaskGP",
-    "kernel_class": "MaternKernel",
-    "acquisition_function_class": "qLogExpectedImprovement"
-}
-```
-
-### 6. 实验数据分析（基础图表）
-```python
-{
-    "surrogate_model_class": "SingleTaskGP",
-    "kernel_class": "MaternKernel",
-    "kernel_options": {"nu": 2.5}
-}
-```
-
-### 7. 切片图和等高线图生成
-```python
-{
-    "surrogate_model_class": "SingleTaskGP",
-    "kernel_class": "RBFKernel"
-}
-```
-
-### 8. ScaleKernel配置（包装其他核函数）
-```python
-{
-    "surrogate_model_class": "SingleTaskGP",
-    "kernel_class": "ScaleKernel",
-    "kernel_options": {
-        "base_kernel": "MaternKernel",  # 基础核函数
-        "outputscale": 2.0              # 输出缩放因子
-    }
-}
-```
-
-### 9. ScaleKernel + RBFKernel组合
-```python
-{
-    "surrogate_model_class": "SingleTaskGP",
-    "kernel_class": "ScaleKernel",
-    "kernel_options": {
-        "base_kernel": "RBFKernel",     # 基础核函数
-        "outputscale": 1.5              # 输出缩放
-    }
-}
-```
-
-## 📊 性能优化建议
-
-### 贝叶斯优化配置
-1. **数据量较少时** (< 20 个实验): 使用 `MaternKernel` 和 `qExpectedImprovement`
-2. **数据量中等时** (20-100 个实验): 使用 `RBFKernel` 和 `qNoisyExpectedImprovement`
-3. **数据量较大时** (> 100 个实验): 使用 `SingleTaskVariationalGP` 和 `qLogExpectedImprovement`
-4. **高维问题** (> 10 个参数): 使用 `SaasFullyBayesianSingleTaskGP`
-5. **多目标优化**: 优先使用 `qLogExpectedHypervolumeImprovement`
-
-### 图表生成优化
-1. **切片图生成**: 只生成需要的参数，避免不必要的计算
-2. **等高线图生成**: 使用 `RBFKernel` 获得更平滑的等高线
-3. **交叉验证图**: 包含详细hover信息，便于分析模型表现
-4. **参数类型判断**: 基于参数空间配置而非数据统计，更准确
-5. **图表查看**: 使用 `/chart/{file_id}` 接口直接查看HTML图表
-
-### 服务器配置
-1. **单进程模式**: 开发测试时使用 `python api_parameter_optimizer_v3.py`
-2. **多进程模式**: 生产环境使用 `uvicorn api_parameter_optimizer_v3:app --host 0.0.0.0 --port 3320 --workers 4`
-3. **内存优化**: 大量图表生成时注意清理临时文件
-
-## 🆕 新功能特性
-
-### 细粒度图表生成
-- **按需生成**: 只生成用户指定的图表，提高效率
-- **参数精确控制**: 基于参数空间配置判断参数类型，更准确
-- **独立接口**: 切片图和等高线图有独立的API接口
-
-### 增强的交互体验
-- **详细hover信息**: 交叉验证图显示每个点的完整参数信息
-- **直接查看**: 图表可直接在浏览器中查看，无需下载
-- **实时生成**: 图表按需生成，减少存储空间
-
-### 智能参数处理
-- **类型智能判断**: 基于参数空间配置而非数据统计
-- **中位数/众数固定**: 切片图中其他参数使用统计值固定
-- **缓存优化**: Ax优化器缓存机制，避免重复重建
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 📄 许可证
-
-MIT License
-
-## 📞 联系方式
-
-如有问题，请通过 GitHub Issues 联系。
