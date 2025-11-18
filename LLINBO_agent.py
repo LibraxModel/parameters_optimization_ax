@@ -90,11 +90,11 @@ class OpenAIProvider(LLMProvider):
                 model=self.config.model_name,
                 messages=[
                     {"role": "system", "content": """
-                    你是一个专业的参数优化算法专家，
-                    擅长基于用户提供的先验实验数据和专业领域从你的训练数据中获取背景知识进行针对该领域的参数优化推荐。
-                    如果你有80%的把握你所推荐的参数组合得到的实验结果会比先验数据中的最好的结果更好，才推荐这个参数组合。
-                    请严格按照JSON格式返回结果，不要有任何其他内容。
-                    ⚠️ 警告！你的推荐不能来自于先验数据。
+                    You are a professional parameter optimization algorithm expert,
+                    skilled in providing parameter optimization recommendations for specific domains based on prior experimental data provided by users and domain knowledge from your training data.
+                    Only recommend a parameter combination if you are 80% confident that the experimental results from your recommended parameter combination will be better than the best results in the prior data.
+                    Please strictly return results in JSON format only, without any other content.
+                    ⚠️ WARNING! Your recommendations must not come from the prior data.
                     
                     """ },
                     {"role": "user", "content": prompt}
@@ -156,52 +156,52 @@ class LLINBOAgent:
     def _build_context_prompt(self) -> str:
         """构建包含问题背景的提示词"""
         prompt_parts = [
-            "# 优化问题背景",
-            f"**问题描述**: {self.problem_context.problem_description}",
-            f"**行业领域**: {self.problem_context.industry}",
+            "# Optimization Problem Context",
+            f"**Problem Description**: {self.problem_context.problem_description}",
+            f"**Industry Domain**: {self.problem_context.industry}",
         ]
         
         if self.problem_context.domain_knowledge:
-            prompt_parts.append(f"**领域知识**: {self.problem_context.domain_knowledge}")
+            prompt_parts.append(f"**Domain Knowledge**: {self.problem_context.domain_knowledge}")
         
         if self.problem_context.constraints:
-            prompt_parts.append(f"**约束条件**: {', '.join(self.problem_context.constraints)}")
+            prompt_parts.append(f"**Constraints**: {', '.join(self.problem_context.constraints)}")
         
         if self.problem_context.optimization_goals:
-            prompt_parts.append(f"**优化目标**: {', '.join(self.problem_context.optimization_goals)}")
+            prompt_parts.append(f"**Optimization Goals**: {', '.join(self.problem_context.optimization_goals)}")
         
         return "\n".join(prompt_parts)
     
     def _build_parameter_space_prompt(self) -> str:
         """构建参数空间描述提示词"""
         prompt_parts = [
-            "# 参数空间定义",
-            "以下是需要优化的参数及其范围：",
+            "# Parameter Space Definition",
+            "The following are the parameters to be optimized and their ranges:",
             "",
-            "**重要提示**：如果参数是离散参数，必须从列出的可选值中选择，不能选择其他值；如果参数是连续参数，值必须在 [最小值, 最大值] 范围内。"
+            "**Important Note**: If a parameter is discrete, you must select from the listed optional values and cannot choose other values; if a parameter is continuous, the value must be within the [minimum, maximum] range."
         ]
         
         for i, param in enumerate(self.parameters, 1):
             param_desc = [f"{i}. **{param.name}**"]
             
             if param.description:
-                param_desc.append(f"   描述: {param.description}")
+                param_desc.append(f"   Description: {param.description}")
             
             if param.type == "range" and param.bounds:
-                param_desc.append(f"   类型: 连续参数")
-                param_desc.append(f"   范围: [{param.bounds[0]}, {param.bounds[1]}]")
+                param_desc.append(f"   Type: Continuous parameter")
+                param_desc.append(f"   Range: [{param.bounds[0]}, {param.bounds[1]}]")
                 if param.unit:
-                    param_desc.append(f"   单位: {param.unit}")
+                    param_desc.append(f"   Unit: {param.unit}")
             elif param.type == "choice" and param.values:
-                param_desc.append(f"   类型: 离散参数（必须从以下值中选择一个）")
+                param_desc.append(f"   Type: Discrete parameter (must select one from the following values)")
                 # 明确列出所有可选值
                 values_str = ", ".join([str(v) for v in param.values])
-                param_desc.append(f"   可选值列表: [{values_str}]")
-                param_desc.append(f"   可选值数量: {len(param.values)} 个")
-                param_desc.append(f"   ⚠️ 重要：只能选择列表中的值，不能选择其他值或中间值")
+                param_desc.append(f"   Optional values: [{values_str}]")
+                param_desc.append(f"   Number of optional values: {len(param.values)}")
+                param_desc.append(f"   ⚠️ Important: Only values from the list can be selected, no other values or intermediate values")
             
             if param.value_type:
-                param_desc.append(f"   值类型: {param.value_type}")
+                param_desc.append(f"   Value type: {param.value_type}")
             
             prompt_parts.append("\n".join(param_desc))
         
@@ -210,19 +210,18 @@ class LLINBOAgent:
     def _build_objectives_prompt(self) -> str:
         """构建优化目标描述提示词"""
         prompt_parts = [
-            "# 优化目标",
-            "需要优化的指标及其方向："
+            "# Optimization Objectives",
+            "Metrics to be optimized and their directions:"
         ]
         
         for metric_name, config in self.objectives.items():
             minimize = config.get("minimize", True)
-            direction = "最小化" if minimize else "最大化"
-            direction_en = "minimize" if minimize else "maximize"
-            prompt_parts.append(f"- **{metric_name}**: {direction} ({direction_en})")
+            direction = "minimize" if minimize else "maximize"
+            prompt_parts.append(f"- **{metric_name}**: {direction}")
         
         # 添加优化方向说明
         if len(self.objectives) > 1:
-            prompt_parts.append("\n**注意**: 这是多目标优化问题，需要平衡多个目标。")
+            prompt_parts.append("\n**Note**: This is a multi-objective optimization problem that requires balancing multiple objectives.")
         
         return "\n".join(prompt_parts)
     
@@ -234,11 +233,11 @@ class LLINBOAgent:
             minimize = config.get("minimize", True)
             if minimize:
                 instructions.append(
-                    f"- **{metric_name}**: 需要**最小化**，优先选择能降低该指标值的参数组合"
+                    f"- **{metric_name}**: Needs to be **minimized**, prioritize parameter combinations that can reduce this metric value"
                 )
             else:
                 instructions.append(
-                    f"- **{metric_name}**: 需要**最大化**，优先选择能提高该指标值的参数组合"
+                    f"- **{metric_name}**: Needs to be **maximized**, prioritize parameter combinations that can increase this metric value"
                 )
         
         return "\n".join(instructions)
@@ -246,11 +245,11 @@ class LLINBOAgent:
     def _build_prior_data_prompt(self) -> str:
         """构建先验实验数据提示词"""
         if not self.prior_experiments:
-            return "# 先验实验数据\n暂无先验实验数据。"
+            return "# Prior Experimental Data\nNo prior experimental data available."
         
         prompt_parts = [
-            "# 先验实验数据",
-            f"以下是 {len(self.prior_experiments)} 个历史实验结果：",
+            "# Prior Experimental Data",
+            f"The following are {len(self.prior_experiments)} historical experimental results:",
             ""
         ]
         
@@ -258,7 +257,7 @@ class LLINBOAgent:
         data_rows = []
         for i, exp in enumerate(self.prior_experiments, 1):
             row = {
-                "实验编号": i,
+                "Experiment_ID": i,
                 **exp.parameters,
                 **exp.metrics
             }
@@ -269,6 +268,53 @@ class LLINBOAgent:
         prompt_parts.append(df.to_string(index=False))
         prompt_parts.append("```")
         
+        
+        return "\n".join(prompt_parts)
+    
+    def _build_initial_sampling_prompt(self, num_suggestions: int = 1) -> str:
+        """构建初始采样提示词（无先验数据时使用）"""
+        prompt_parts = [
+            self._build_context_prompt(),
+            "",
+            self._build_parameter_space_prompt(),
+            "",
+            self._build_objectives_prompt(),
+            "",
+            "# Initial Sampling Task",
+            f"Currently there is no prior experimental data. Please recommend {num_suggestions} initial parameter configurations.",
+            "",
+            "**Task Objective**:",
+            "Based on your domain knowledge, recommend parameter combinations that you believe are **most promising to reach near the optimal solution**.",
+            "You do not need to uniformly cover the parameter space; just recommend sufficiently good parameter combinations.",
+            "",
+            "**Recommendation Strategy**:",
+            "1. **Parameter values must strictly conform to definitions**:",
+            "   - For continuous parameters (range type), values must be within the [minimum, maximum] range",
+            "   - For discrete parameters (choice type), values must **exactly equal** one of the values in the optional values list, no other values allowed",
+            "   - For example: if optional values are ['A', 'B', 'C', 'D'], you can only choose one of these 4 values",
+            "2. **Domain knowledge guidance**: Based on your deep understanding of this domain, recommend parameter combinations that you believe are most likely to produce excellent results",
+            "3. **Optimization objective orientation**: According to optimization objectives (maximize or minimize), recommend parameter combinations that can achieve these objectives",
+            "4. If there are multiple objectives, consider multi-objective optimization and recommend parameter combinations that can balance different objectives",
+            "5. You can recommend multiple different parameter combinations, but all should be combinations that are promising to reach near good results",
+            "",
+            "**Output Requirements**:",
+            "- Please explain in the recommendation reason why you recommend this parameter combination and why you believe it can reach near good results",
+            "- Explain how this parameter combination satisfies the optimization objectives",
+            "",
+            "Please return the recommended parameter configurations in JSON format as follows:",
+            "```json",
+            "{",
+            '  "suggestions": [',
+            '    {',
+            '      "parameter_name_1": value1,',
+            '      "parameter_name_2": value2,',
+            '      ...',
+            '      "reason": "Recommendation reason (explain why you chose this parameter combination and why it can reach near the optimal solution)"',
+            '    }',
+            '  ]',
+            "}",
+            "```"
+        ]
         
         return "\n".join(prompt_parts)
     
@@ -283,37 +329,36 @@ class LLINBOAgent:
             "",
             self._build_prior_data_prompt(),
             "",
-            "# 优化任务",
-            f"基于以上信息，请推荐 {num_suggestions} 个参数配置用于下一步实验。",
+            "# Optimization Task",
+            f"Based on the above information, please recommend {num_suggestions} parameter configurations for the next experiment.",
             "",
-            "**优化方向要求**：",
+            "**Optimization Direction Requirements**:",
             self._build_optimization_direction_instruction(),
             "",
-            "**其他要求**：",
-            "1. **参数值必须严格符合定义**：",
-            "   - 对于连续参数（range类型），值必须在 [最小值, 最大值] 范围内",
-            "   - 对于离散参数（choice类型），值必须**完全等于**可选值列表中的某个值，不能是其他值",
-            "   - 例如：如果可选值是 ['A', 'B', 'C', 'D']，则只能选择这4个值之一",
-            "2. 如果你有80%的信心你所推荐的参数组合得到的实验结果会比先验数据中的最好的结果更好，才推荐这个参数组合。",
-            "2.1 若要求推荐多组参数，则按你的信心大小从高到低推荐，直到满足要求为止",
-            "3. 若有先验实验数据，考虑先验数据中的模式和趋势",
-            "3.1 若没有先验实验数据，则不考虑先验数据中的模式和趋势,仅根据行业背景知识进行推理推荐",
-            "4. 在探索（exploration）和利用（exploitation）之间取得平衡",
-            "5. 如果存在多个目标，需要考虑多目标优化（帕累托最优）",
-            "6. ⚠️警告！你的推荐必须根据先验数据以及你拥有的行业背景知识进行推理，不能直接推荐先验数据中已有的点。",
-            "7. ⚠️警告！你的推荐不能与先验数据重复。推荐的参数组合一定不能已存在于先验数据中",
-            "8. 请在推荐理由中说明你为什么推荐这个参数组合。",
+            "**Other Requirements**:",
+            "1. **Parameter values must strictly conform to definitions**:",
+            "   - For continuous parameters (range type), values must be within the [minimum, maximum] range",
+            "   - For discrete parameters (choice type), values must **exactly equal** one of the values in the optional values list, no other values allowed",
+            "   - For example: if optional values are ['A', 'B', 'C', 'D'], you can only choose one of these 4 values",
+            "2. Only recommend a parameter combination if you are 80% confident that the experimental results from your recommended parameter combination will be better than the best results in the prior data.",
+            "2.1 If multiple parameter groups are required, recommend them in order of confidence from high to low until the requirement is met",
+            "3. Consider patterns and trends in the prior data, but do not directly recommend points that already exist in the prior data",
+            "4. Balance between exploration and exploitation",
+            "5. If there are multiple objectives, consider multi-objective optimization (Pareto optimality)",
+            "6. ⚠️ WARNING! Your recommendations must be based on reasoning from the prior data and your industry background knowledge, and cannot directly recommend points that already exist in the prior data.",
+            "7. ⚠️ WARNING! Your recommendations must not duplicate the prior data. The recommended parameter combinations must not already exist in the prior data",
+            "8. Please explain in the recommendation reason why you recommend this parameter combination.",
             
             "",
-            "请以 JSON 格式返回推荐的参数配置，格式如下：",
+            "Please return the recommended parameter configurations in JSON format as follows:",
             "```json",
             "{",
             '  "suggestions": [',
             '    {',
-            '      "参数名1": 值1,',
-            '      "参数名2": 值2,',
+            '      "parameter_name_1": value1,',
+            '      "parameter_name_2": value2,',
             '      ...',
-            '      "reason": "推荐理由"',
+            '      "reason": "Recommendation reason"',
             '    }',
             '  ]',
             "}",
@@ -443,9 +488,17 @@ class LLINBOAgent:
         
         return normalized
     
-    def suggest_parameters(self, num_suggestions: int = 1, print_prompt: bool = False, print_response: bool = False) -> List[Dict[str, Any]]:
+    def suggest_initial_parameters(
+        self, 
+        num_suggestions: int = 1, 
+        print_prompt: bool = False, 
+        print_response: bool = False
+    ) -> List[Dict[str, Any]]:
         """
-        生成参数优化建议
+        生成初始采样参数建议（无先验数据时使用）
+        
+        该方法专门用于没有先验实验数据的情况，基于领域知识推荐最有希望达到最优解附近的参数组合。
+        不需要均匀覆盖参数空间，只需要推荐足够好的参数组合即可。
         
         Args:
             num_suggestions: 需要生成的建议数量
@@ -455,6 +508,85 @@ class LLINBOAgent:
         Returns:
             推荐的参数配置列表
         """
+        # 构建初始采样提示词
+        prompt = self._build_initial_sampling_prompt(num_suggestions=num_suggestions)
+        
+        # 根据 print_prompt 参数决定是否打印完整提示词
+        if print_prompt:
+            print("\n" + "=" * 80)
+            print("📝 输入大模型的完整提示词（初始采样模式）:")
+            print("=" * 80)
+            print(prompt)
+            print("=" * 80 + "\n")
+        
+        # 调用大模型生成建议
+        print("🤖 正在使用大模型生成初始采样建议...")
+        response = self.llm_provider.generate(prompt)
+        
+        # 根据 print_response 参数决定是否打印大模型的原始回答
+        if print_response:
+            print("\n" + "=" * 80)
+            print("📤 大模型的原始回答:")
+            print("=" * 80)
+            print(response)
+            print("=" * 80 + "\n")
+        
+        # 解析响应
+        suggestions = self._parse_llm_response(response)
+        
+        # 验证和规范化参数
+        valid_suggestions = []
+        for suggestion in suggestions:
+            params = {k: v for k, v in suggestion.items() if k != "reason"}
+            
+            if self._validate_parameters(params):
+                normalized = self._normalize_parameters(params)
+                valid_suggestions.append(normalized)
+            else:
+                print(f"⚠️ 参数验证失败，跳过: {params}")
+        
+        # 如果验证后的建议数量不足，尝试生成更多
+        if len(valid_suggestions) < num_suggestions:
+            print(f"⚠️ 只生成了 {len(valid_suggestions)} 个有效建议，期望 {num_suggestions} 个")
+        
+        # 记录到历史
+        for suggestion in valid_suggestions:
+            self.optimization_history.append({
+                "suggestion": suggestion,
+                "timestamp": pd.Timestamp.now().isoformat(),
+                "type": "initial_sampling"
+            })
+        
+        return valid_suggestions[:num_suggestions]
+    
+    def suggest_parameters(
+        self, 
+        num_suggestions: int = 1, 
+        print_prompt: bool = False, 
+        print_response: bool = False,
+        auto_initial_sampling: bool = True
+    ) -> List[Dict[str, Any]]:
+        """
+        生成参数优化建议
+        
+        Args:
+            num_suggestions: 需要生成的建议数量
+            print_prompt: 是否打印输入大模型的完整提示词
+            print_response: 是否打印大模型的原始回答
+            auto_initial_sampling: 如果没有先验数据，是否自动切换到初始采样模式（默认True）
+            
+        Returns:
+            推荐的参数配置列表
+        """
+        # 如果没有先验数据且启用了自动初始采样，则使用初始采样模式
+        if not self.prior_experiments and auto_initial_sampling:
+            print("📊 检测到没有先验实验数据，自动切换到初始采样模式...")
+            return self.suggest_initial_parameters(
+                num_suggestions=num_suggestions,
+                print_prompt=print_prompt,
+                print_response=print_response
+            )
+        
         # 构建提示词
         prompt = self._build_optimization_prompt(num_suggestions=num_suggestions)
         
@@ -484,8 +616,7 @@ class LLINBOAgent:
         # 验证和规范化参数
         valid_suggestions = []
         for suggestion in suggestions:
-            
-            params = {k: v for k, v in suggestion.items()}
+            params = {k: v for k, v in suggestion.items() if k != "reason"}
             
             if self._validate_parameters(params):
                 normalized = self._normalize_parameters(params)
@@ -592,18 +723,57 @@ def example_usage():
         base_url="https://api.openai.com/v1"
     )
     
-    agent = LLINBOAgent(
+    # 示例1: 有先验数据的情况
+    agent_with_prior = LLINBOAgent(
         problem_context=problem_context,
-        parameters = parameter_space,
+        parameters=parameter_space,
         objectives=objectives,
         llm_config=llm_config,
         prior_experiments=prior_experiments
     )
     
-    # 6. 生成优化建议
-    suggestions = agent.suggest_parameters(num_suggestions=3, print_prompt=True, print_response=True)
-    
+    print("=" * 80)
+    print("示例1: 有先验数据的情况")
+    print("=" * 80)
+    suggestions = agent_with_prior.suggest_parameters(
+        num_suggestions=3, 
+        print_prompt=True, 
+        print_response=True
+    )
     print("\n📊 生成的优化建议:")
+    print(suggestions)
+    
+    # 示例2: 没有先验数据的情况 - 自动初始采样
+    agent_no_prior = LLINBOAgent(
+        problem_context=problem_context,
+        parameters=parameter_space,
+        objectives=objectives,
+        llm_config=llm_config,
+        prior_experiments=None  # 没有先验数据
+    )
+    
+    print("\n" + "=" * 80)
+    print("示例2: 没有先验数据的情况（自动初始采样模式）")
+    print("=" * 80)
+    suggestions = agent_no_prior.suggest_parameters(
+        num_suggestions=5, 
+        print_prompt=True, 
+        print_response=True,
+        auto_initial_sampling=True  # 自动切换到初始采样模式
+    )
+    print("\n📊 生成的初始采样建议:")
+    print(suggestions)
+    
+    # 示例3: 显式调用初始采样方法
+    print("\n" + "=" * 80)
+    print("示例3: 显式调用初始采样方法")
+    print("=" * 80)
+    suggestions = agent_no_prior.suggest_initial_parameters(
+        num_suggestions=5,
+        print_prompt=True,
+        print_response=True
+    )
+    print("\n📊 生成的初始采样建议:")
     print(suggestions)
  
 
