@@ -46,11 +46,14 @@ from botorch.acquisition.multi_objective.logei import (
     qLogExpectedHypervolumeImprovement, qLogNoisyExpectedHypervolumeImprovement
 )
 from botorch.acquisition.multi_objective.parego import qLogNParEGO
+from botorch.utils.multi_objective.hypervolume import Hypervolume, infer_reference_point
+from botorch.utils.multi_objective.pareto import is_non_dominated
         
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass
 import warnings
+import torch
 warnings.filterwarnings("ignore", category=FutureWarning)
 try:
     from gpytorch.utils.warnings import NumericalWarning
@@ -536,6 +539,173 @@ class BayesianOptimizer:
             history_df: 包含所有实验记录的DataFrame
         """
         return self.ax_client.get_trials_data_frame()
+    
+    def compute_point_hypervolumes(self) -> List[float]:
+        """
+        计算每个实验点相对于参考点的 hypervolume 值（仅适用于多目标优化）
+        
+        处理流程：
+        1. 读取全部实验目标值
+        2. 根据优化方向将最小化目标取反，转成“越大越好”
+        3. 对每个目标做 Min-Max 归一化，映射到 [0, 1] 区间，保证不同量纲可比
+        4. 参考点设置为所有数据中最差的点（每个目标的最小值，归一化后为 0）
+        5. 计算所有实验点（包含非帕累托点）相对于参考点的 hypervolume
+        
+        返回列表顺序与 `get_trials_data_frame()` 中的实验顺序一致。
+        如果某个点不支配参考点，则该点的 hypervolume 值为 0。
+        
+        Raises:
+            ValueError: 如果不是多目标优化问题
+            ValueError: 如果没有先验数据
+        """
+        # 检查是否为多目标优化
+        opt_config = self.ax_client.experiment.optimization_config
+        if opt_config is None:
+            raise ValueError("无法获取优化配置")
+        
+        # 检查是否为多目标优化
+        is_moo = getattr(opt_config, "is_moo_problem", False)
+        if not is_moo:
+            raise ValueError("compute_hypervolume 仅适用于多目标优化问题")
+        
+        Y, minimize_flags = self._extract_objective_tensor(opt_config)
+        
+        # 获取优化方向（minimize 或 maximize）
+        # 将最小化目标转换为最大化（BoTorch 的 Hypervolume 假设最大化）
+        for i, minimize in enumerate(minimize_flags):
+            if minimize:
+                Y[:, i] = -Y[:, i]
+        
+        # 对每个目标做 Min-Max 归一化，映射到 [0, 1] 区间，避免不同单位或量纲影响 hypervolume
+        Y_standardized = self._standardize_objectives(Y)
+        
+        # 验证归一化：归一化后的数据应该在 [0, 1] 区间内
+        # 添加调试信息（可选，用于验证归一化是否正确）
+        if False:  # 设置为 True 可以启用调试输出
+            import logging
+            logger = logging.getLogger(__name__)
+            mins_after = Y_standardized.min(dim=0).values
+            maxs_after = Y_standardized.max(dim=0).values
+            means_after = Y_standardized.mean(dim=0)
+            logger.info(f"归一化后统计: 最小值={mins_after.tolist()}, 最大值={maxs_after.tolist()}, "
+                       f"均值={means_after.tolist()}")
+        
+        # 找到帕累托前沿
+        pareto_mask = is_non_dominated(Y_standardized)
+        pareto_Y = Y_standardized[pareto_mask]
+        
+        if pareto_Y.shape[0] == 0:
+            return [0.0] * Y.shape[0]
+        
+        # 参考点：使用所有数据中最差的点（每个目标的最小值）
+        # 归一化后，每个目标的最小值应该是 0，所以参考点应该是 [0, 0, ..., 0]
+        ref_point = Y_standardized.min(dim=0).values.to(device=self.device, dtype=torch.float32)
+        
+        # 确保 ref_point 的维度正确
+        if ref_point.shape[0] != pareto_Y.shape[1]:
+            raise ValueError(
+                f"参考点维度 ({ref_point.shape[0]}) 与目标数量 ({pareto_Y.shape[1]}) 不匹配"
+            )
+        
+        # 计算 hypervolume（用于单点计算）
+        hv = Hypervolume(ref_point=ref_point)
+        point_hypervolumes = self._compute_point_hypervolumes(
+            hypervolume=hv,
+            Y=Y_standardized,
+            ref_point=ref_point
+        )
+        return point_hypervolumes
+
+    def _extract_objective_tensor(
+        self,
+        opt_config
+    ) -> Tuple[torch.Tensor, List[bool]]:
+        trials_df = self.ax_client.get_trials_data_frame()
+        if trials_df.empty:
+            raise ValueError("没有先验实验数据，无法计算 hypervolume")
+        
+        objective = opt_config.objective
+        if isinstance(objective, MultiObjective):
+            objective_names = [obj.metric.name for obj in objective.objectives]
+            minimize_flags = [obj.minimize for obj in objective.objectives]
+        elif isinstance(objective, ScalarizedObjective):
+            objective_names = [metric.name for metric in objective.metrics]
+            minimize = getattr(objective, "minimize", True)
+            minimize_flags = [minimize] * len(objective_names)
+        else:
+            raise ValueError("无法识别优化目标类型")
+        
+        objective_values = []
+        for _, row in trials_df.iterrows():
+            values = []
+            for obj_name in objective_names:
+                mean_col = f"{obj_name}_mean"
+                if mean_col in row:
+                    value = row[mean_col]
+                else:
+                    value = row.get(obj_name, None)
+                if pd.notna(value):
+                    values.append(float(value))
+                else:
+                    break
+            if len(values) == len(objective_names):
+                objective_values.append(values)
+        
+        if not objective_values:
+            raise ValueError("无法从实验数据中提取有效的目标值")
+        
+        Y = torch.tensor(objective_values, dtype=torch.float32, device=self.device)
+        return Y, minimize_flags
+
+    def _standardize_objectives(self, Y: torch.Tensor) -> torch.Tensor:
+        """
+        对每个目标做 Min-Max 归一化，将每个目标映射到 [0, 1] 区间。
+        公式: (x - min) / (max - min)
+        如果某个目标的值全部相同（max == min），则保持为 0.5，避免除零。
+        """
+        mins = Y.min(dim=0, keepdim=True).values
+        maxs = Y.max(dim=0, keepdim=True).values
+        ranges = maxs - mins
+        # 如果范围太小（接近0），设为 1，避免除零，并将值设为 0.5
+        ranges = torch.where(ranges < 1e-8, torch.ones_like(ranges), ranges)
+        Y_normalized = (Y - mins) / ranges
+        # 如果范围太小，将值设为 0.5（中间值）
+        Y_normalized = torch.where((maxs - mins) < 1e-8, torch.full_like(Y_normalized, 0.5), Y_normalized)
+        return Y_normalized
+
+    def _compute_point_hypervolumes(
+        self,
+        hypervolume: Hypervolume,
+        Y: torch.Tensor,
+        ref_point: torch.Tensor
+    ) -> List[float]:
+        """
+        计算每个点相对于参考点的 hypervolume 值
+        
+        对于每个点，计算该点与参考点围成的超体积。
+        如果该点支配参考点（所有目标都优于参考点），则 hypervolume = ∏(yi - ri)
+        如果该点不支配参考点，则 hypervolume = 0
+        
+        Args:
+            hypervolume: Hypervolume 计算器（包含参考点）
+            Y: 所有点的目标值张量 (n_points, n_objectives)，已转换为最大化空间
+            ref_point: 参考点张量 (n_objectives,)，已转换为最大化空间
+            
+        Returns:
+            每个点的 hypervolume 值列表（与 Y 的行顺序一致）
+        """
+        num_points = Y.shape[0]
+        point_hvs = []
+        
+        for i in range(num_points):
+            point = Y[i:i+1]  # 单个点，形状 (1, n_objectives)
+            
+            # 直接计算该点与参考点围成的超体积
+            # Hypervolume.compute 内部会处理不支配参考点的情况（返回 0）
+            hv_value = hypervolume.compute(point)
+            point_hvs.append(float(hv_value))
+        
+        return point_hvs
 
 def test_optimizer():
     """

@@ -191,6 +191,16 @@ class UpdateResponse(BaseModel):
     results: List[Dict[str, Any]]
     message: str
 
+class HypervolumeRequest(BaseModel):
+    parameter_space: List[ParameterSpace] = Field(..., description="参数空间定义")
+    objectives: Dict[str, Dict[str, bool]] = Field(..., description="优化目标配置，格式为{'metric_name': {'minimize': bool}}")
+    completed_experiments: List[PriorExperiment] = Field(..., description="已完成的实验结果")
+
+class HypervolumeResponse(BaseModel):
+    success: bool
+    point_hypervolumes: List[float]
+    message: str
+
 # 定义分析请求模型
 class AnalysisRequest(BaseModel):
     parameter_space: List[ParameterSpace] = Field(..., description="参数空间定义")
@@ -705,6 +715,48 @@ async def update_optimization(request: UpdateRequest):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"优化失败: {str(e)}")
+
+
+@app.post("/calculate_hypervolume", response_model=HypervolumeResponse)
+async def calculate_hypervolume(request: HypervolumeRequest):
+    """计算当前先验实验数据的 hypervolume 以及每个点的贡献"""
+    try:
+        if not request.completed_experiments:
+            raise HTTPException(status_code=400, detail="completed_experiments 不能为空")
+        
+        search_space, _ = convert_parameter_space_to_ax_format(request.parameter_space)
+        optimization_config = {
+            "objectives": request.objectives,
+            "use_weights": False,
+            "objective_weights": {},
+            "additional_metrics": []
+        }
+        
+        optimizer = BayesianOptimizer(
+            search_space=search_space,
+            optimization_config=optimization_config
+        )
+        
+        for exp in request.completed_experiments:
+            experiment_result = ExperimentResult(
+                parameters=exp.parameters,
+                metrics=exp.metrics
+            )
+            optimizer.add_prior_experiments([experiment_result])
+        
+        point_hv = optimizer.compute_point_hypervolumes()
+
+        return HypervolumeResponse(
+            success=True,
+            point_hypervolumes=point_hv,
+            message=f"成功计算 hypervolume，共 {len(point_hv)} 个点"
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"计算 hypervolume 失败: {str(e)}")
 
 def check_categorical_data(data: pd.DataFrame, parameters: List[str]) -> bool:
     """检查数据中是否包含类别数据"""
