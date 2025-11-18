@@ -719,7 +719,12 @@ async def update_optimization(request: UpdateRequest):
 
 @app.post("/calculate_hypervolume", response_model=HypervolumeResponse)
 async def calculate_hypervolume(request: HypervolumeRequest):
-    """计算当前先验实验数据的 hypervolume 以及每个点的贡献"""
+    """
+    计算当前先验实验数据的 point_hypervolumes
+    
+    对于单目标优化：返回归一化后的目标值（映射到 [0, 1] 区间）
+    对于多目标优化：返回每个点相对于参考点的 hypervolume 值
+    """
     try:
         if not request.completed_experiments:
             raise HTTPException(status_code=400, detail="completed_experiments 不能为空")
@@ -745,11 +750,20 @@ async def calculate_hypervolume(request: HypervolumeRequest):
             optimizer.add_prior_experiments([experiment_result])
         
         point_hv = optimizer.compute_point_hypervolumes()
+        
+        # 判断是单目标还是多目标
+        opt_config = optimizer.ax_client.experiment.optimization_config
+        is_moo = getattr(opt_config, "is_moo_problem", False) if opt_config else False
+        
+        if is_moo:
+            message = f"成功计算 hypervolume，共 {len(point_hv)} 个点"
+        else:
+            message = f"成功计算归一化目标值，共 {len(point_hv)} 个点"
 
         return HypervolumeResponse(
             success=True,
             point_hypervolumes=point_hv,
-            message=f"成功计算 hypervolume，共 {len(point_hv)} 个点"
+            message=message
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

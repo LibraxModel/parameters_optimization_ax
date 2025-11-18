@@ -542,31 +542,29 @@ class BayesianOptimizer:
     
     def compute_point_hypervolumes(self) -> List[float]:
         """
-        计算每个实验点相对于参考点的 hypervolume 值（仅适用于多目标优化）
+        计算每个实验点的归一化目标值或 hypervolume 值
+        
+        对于单目标优化：返回归一化后的目标值（映射到 [0, 1] 区间）
+        对于多目标优化：返回每个点相对于参考点的 hypervolume 值
         
         处理流程：
         1. 读取全部实验目标值
         2. 根据优化方向将最小化目标取反，转成“越大越好”
         3. 对每个目标做 Min-Max 归一化，映射到 [0, 1] 区间，保证不同量纲可比
-        4. 参考点设置为所有数据中最差的点（每个目标的最小值，归一化后为 0）
-        5. 计算所有实验点（包含非帕累托点）相对于参考点的 hypervolume
+        4. 对于单目标：直接返回归一化后的目标值
+        5. 对于多目标：
+           - 参考点设置为所有数据中最差的点（每个目标的最小值，归一化后为 0）
+           - 计算所有实验点（包含非帕累托点）相对于参考点的 hypervolume
         
         返回列表顺序与 `get_trials_data_frame()` 中的实验顺序一致。
-        如果某个点不支配参考点，则该点的 hypervolume 值为 0。
+        对于多目标，如果某个点不支配参考点，则该点的 hypervolume 值为 0。
         
         Raises:
-            ValueError: 如果不是多目标优化问题
             ValueError: 如果没有先验数据
         """
-        # 检查是否为多目标优化
         opt_config = self.ax_client.experiment.optimization_config
         if opt_config is None:
             raise ValueError("无法获取优化配置")
-        
-        # 检查是否为多目标优化
-        is_moo = getattr(opt_config, "is_moo_problem", False)
-        if not is_moo:
-            raise ValueError("compute_hypervolume 仅适用于多目标优化问题")
         
         Y, minimize_flags = self._extract_objective_tensor(opt_config)
         
@@ -576,20 +574,17 @@ class BayesianOptimizer:
             if minimize:
                 Y[:, i] = -Y[:, i]
         
-        # 对每个目标做 Min-Max 归一化，映射到 [0, 1] 区间，避免不同单位或量纲影响 hypervolume
+        # 对每个目标做 Min-Max 归一化，映射到 [0, 1] 区间，避免不同单位或量纲影响
         Y_standardized = self._standardize_objectives(Y)
         
-        # 验证归一化：归一化后的数据应该在 [0, 1] 区间内
-        # 添加调试信息（可选，用于验证归一化是否正确）
-        if False:  # 设置为 True 可以启用调试输出
-            import logging
-            logger = logging.getLogger(__name__)
-            mins_after = Y_standardized.min(dim=0).values
-            maxs_after = Y_standardized.max(dim=0).values
-            means_after = Y_standardized.mean(dim=0)
-            logger.info(f"归一化后统计: 最小值={mins_after.tolist()}, 最大值={maxs_after.tolist()}, "
-                       f"均值={means_after.tolist()}")
+        # 检查是否为单目标优化
+        is_moo = getattr(opt_config, "is_moo_problem", False)
         
+        if not is_moo:
+            # 单目标优化：直接返回归一化后的目标值
+            return Y_standardized[:, 0].tolist()
+        
+        # 多目标优化：计算 hypervolume
         # 找到帕累托前沿
         pareto_mask = is_non_dominated(Y_standardized)
         pareto_Y = Y_standardized[pareto_mask]
@@ -632,6 +627,10 @@ class BayesianOptimizer:
             objective_names = [metric.name for metric in objective.metrics]
             minimize = getattr(objective, "minimize", True)
             minimize_flags = [minimize] * len(objective_names)
+        elif isinstance(objective, Objective):
+            # 单目标优化
+            objective_names = [objective.metric.name]
+            minimize_flags = [objective.minimize]
         else:
             raise ValueError("无法识别优化目标类型")
         
