@@ -54,6 +54,11 @@ class LLMConfig:
     model_name: str = "gpt-4"  # 模型名称
     api_key: Optional[str] = None  # API密钥
     base_url: Optional[str] = None  # API基础URL
+    extra_body: Dict[str, Any] = field(default_factory=lambda: {
+        "thinking": {
+            "type": "enabled"  # 或 "disabled" / "auto"
+        }
+    })
     
     
 
@@ -86,25 +91,71 @@ class OpenAIProvider(LLMProvider):
     def generate(self, prompt: str, **kwargs) -> str:
         """使用 OpenAI API 生成文本"""
         try:
-            response = self.client.chat.completions.create(
-                model=self.config.model_name,
-                messages=[
+            # 构建 API 调用参数
+            api_params = {
+                "model": self.config.model_name,
+                "messages": [
                     {"role": "system", "content": """
-                    You are a professional parameter optimization algorithm expert,
-                    skilled in providing parameter optimization recommendations for specific domains based on prior experimental data provided by users and domain knowledge from your training data.
-                    Only recommend a parameter combination if you are 80% confident that the experimental results from your recommended parameter combination will be better than the best results in the prior data.
-                    Please strictly return results in JSON format only, without any other content.
-                    ⚠️ WARNING! Your recommendations must not come from the prior data.
+                    You are an advanced parameter-optimization agent designed to recommend experimental parameter configurations. 
+                    Your role is similar to a Bayesian optimization expert: you combine (1) prior experimental data provided by the user, 
+                    (2) domain knowledge explicitly provided by the user, and (3) general domain knowledge from your pretraining, 
+                    to propose improved parameter suggestions.
+
+                    Behavior requirements:
+
+                    1. **Two operating modes**
+
+                        1.1 When prior experimental data IS available:
+                            - Use the prior data as the primary signal to detect trends, optima, and promising regions.
+                            - Only recommend a parameter combination if you are at least **80% confident** that it will produce better outcomes
+                              than the best result in the user-provided prior data.
+                            - If you cannot reach this confidence threshold, you must output an empty JSON object: `{}`.
+
+                        1.2 When NO prior experimental data is available (or the dataset is empty):
+                            - You must still make a **best-effort recommendation**.
+                            - In this case, rely on:
+                                (a) domain knowledge explicitly provided by the user (e.g. constraints, industry context, mechanism hints), and
+                                (b) your general domain knowledge from pretraining.
+                            - Aim to propose a parameter combination that is **plausibly high-performing** and close to a likely good operating region,
+                              while strictly respecting all constraints.
+                            - You do **not** need to compare to a "best prior result" in this mode, but you must avoid arbitrary or random choices.
+
+                    2. **No Data Reuse / Novelty (when prior data exists)**
+                        - ⚠️ WARNING: When prior experimental data is provided, your recommended parameter combination must **not** be identical to 
+                          any parameter combination in that dataset.
+                        - Ensure that the recommendation is novel and not trivially obtained by copying a historical entry.
+
+                    3. **Evidence-Based and Physically Valid**
+                        - Your recommendations must be grounded in:
+                            (a) patterns in the prior data (if available), AND/OR
+                            (b) domain knowledge from user instructions and your pretraining.
+                        - Do not hallucinate unphysical, chemically impossible, or domain-invalid values.
+
+                    4. **Constraints**
+                        - The recommendation must obey all explicit constraints specified by the user (ranges, allowed categories, safety limits, etc.).
+                        - If no valid recommendation exists under constraints + novelty + confidence rules, return `{}`.
+
+                   
                     
                     """ },
                     {"role": "user", "content": prompt}
                 ]
+            }
             
+            # 如果配置了 extra_body，则添加到 API 参数中
+            if self.config.extra_body:
+                api_params["extra_body"] = self.config.extra_body
             
-        )
+            # 合并 kwargs 中的额外参数
+            api_params.update(kwargs)
+            
+            response = self.client.chat.completions.create(**api_params)
         except Exception as e:
             raise RuntimeError(f"调用 OpenAI API 失败: {e}")
-        return response.choices[0].message.content
+        if response.choices[0].message.reasoning_content:
+            return response.choices[0].message.reasoning_content + "\n" + response.choices[0].message.content
+        else:
+            return response.choices[0].message.content
 
 
 class LLINBOAgent:
@@ -292,7 +343,7 @@ class LLINBOAgent:
             "   - For continuous parameters (range type), values must be within the [minimum, maximum] range",
             "   - For discrete parameters (choice type), values must **exactly equal** one of the values in the optional values list, no other values allowed",
             "   - For example: if optional values are ['A', 'B', 'C', 'D'], you can only choose one of these 4 values",
-            "2. **Domain knowledge guidance**: Based on your deep understanding of this domain, recommend parameter combinations that you believe are most likely to produce excellent results",
+            "2. **Domain knowledge guidance**: Based on your own understanding and custom domain knowledge in this domain, recommend parameter combinations that you believe are most likely to produce excellent results",
             "3. **Optimization objective orientation**: According to optimization objectives (maximize or minimize), recommend parameter combinations that can achieve these objectives",
             "4. If there are multiple objectives, consider multi-objective optimization and recommend parameter combinations that can balance different objectives",
             "5. You can recommend multiple different parameter combinations, but all should be combinations that are promising to reach near good results",
@@ -340,12 +391,12 @@ class LLINBOAgent:
             "   - For continuous parameters (range type), values must be within the [minimum, maximum] range",
             "   - For discrete parameters (choice type), values must **exactly equal** one of the values in the optional values list, no other values allowed",
             "   - For example: if optional values are ['A', 'B', 'C', 'D'], you can only choose one of these 4 values",
-            "2. Only recommend a parameter combination if you are 80% confident that the experimental results from your recommended parameter combination will be better than the best results in the prior data.",
+            "2. Only recommend a parameter combination if you are 80% confident that the experimental results from your recommended parameter combination will be better than the results in the prior data.",
             "2.1 If multiple parameter groups are required, recommend them in order of confidence from high to low until the requirement is met",
             "3. Consider patterns and trends in the prior data, but do not directly recommend points that already exist in the prior data",
             "4. Balance between exploration and exploitation",
             "5. If there are multiple objectives, consider multi-objective optimization (Pareto optimality)",
-            "6. ⚠️ WARNING! Your recommendations must be based on reasoning from the prior data and your industry background knowledge, and cannot directly recommend points that already exist in the prior data.",
+            "6. ⚠️ WARNING! Your recommendations must be based on reasoning from the prior data and your industry background knowledge, do not merely make recommendations based on prior data or only reason and recommend based on industry background knowledge. Instead, consider all factors comprehensively.",
             "7. ⚠️ WARNING! Your recommendations must not duplicate the prior data. The recommended parameter combinations must not already exist in the prior data",
             "8. Please explain in the recommendation reason why you recommend this parameter combination.",
             
