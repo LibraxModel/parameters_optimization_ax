@@ -154,9 +154,9 @@ api_analysis_output_*/
 simplified_interface_test/
 convenience_function_test/
 test/test_results.csv
-test/1728_BMS_experiments_yield_and_cost.csv
+
 test/bayesian_optimization_results.csv
-test/bayesian_optimization_test.ipynb
+
 test/optimization_summary.csv
 # Generated HTML files
 *.html
