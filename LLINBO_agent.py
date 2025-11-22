@@ -54,12 +54,14 @@ class LLMConfig:
     model_name: str = "gpt-4"  # 模型名称
     api_key: Optional[str] = None  # API密钥
     base_url: Optional[str] = None  # API基础URL
+    temperature: float = 0.0  # 温度参数（0.0-2.0），控制输出的随机性
     extra_body: Dict[str, Any] = field(default_factory=lambda: {
         "thinking": {
-            "type": "enabled"  # 或 "disabled" / "auto"
-        }
+            "type": "disabled"  # 或 "disabled" / "auto"
+        },
+        "thinking_mode": False
     })
-    
+
     
 
 
@@ -108,23 +110,29 @@ class OpenAIProvider(LLMProvider):
                 "messages": [
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": prompt}
-                ]
+                ],
+                "temperature": self.config.temperature  # 温度参数直接作为标准参数
             }
             
             # 如果配置了 extra_body，则添加到 API 参数中
             if self.config.extra_body:
                 api_params["extra_body"] = self.config.extra_body
             
-            # 合并 kwargs 中的额外参数
+            # 合并 kwargs 中的额外参数（kwargs 中的参数会覆盖默认值）
             api_params.update(kwargs)
             
             response = self.client.chat.completions.create(**api_params)
         except Exception as e:
             raise RuntimeError(f"调用 OpenAI API 失败: {e}")
-        if response.choices[0].message.reasoning_content:
-            return response.choices[0].message.reasoning_content + "\n" + response.choices[0].message.content
+        
+        # 安全地访问 reasoning_content（如果存在）
+        message = response.choices[0].message
+        reasoning_content = getattr(message, 'reasoning_content', None)
+        
+        if reasoning_content:
+            return reasoning_content + "\n" + message.content
         else:
-            return response.choices[0].message.content
+            return message.content
 
 
 class LLINBOAgent:

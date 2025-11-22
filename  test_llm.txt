@@ -1,0 +1,611 @@
+豆包：
+base	ligand	solvent	concentration	temperature	yield	cost
+0	CsOAc	BrettPhos	DMAc	0.100	105	4.74	0.191274
+1	CsOPiv	X-Phos	DMAc	0.100	105	29.16	0.120947
+2	CsOAc	tBPh-CPhos	BuCN	0.100	105	5.88	0.332280
+3	CsOPiv	JackiePhos	DMAc	0.153	105	2.84	0.437743
+4	KOAc	PPh3	DMAc	0.100	90	14.29	0.026333
+5	CsOPiv	X-Phos	DMAc	0.100	120	48.15	0.121002
+6	CsOPiv	PCy3 HBF4	DMAc	0.100	105	8.85	0.118559
+7	KOAc	PPh3	DMAc	0.100	105	28.15	0.026373
+8	CsOPiv	PPhtBu2	DMAc	0.100	120	1.31	0.129578
+9	CsOPiv	X-Phos	BuOAc	0.100	105	59.92	0.132916
+10	CsOPiv	X-Phos	BuOAc	0.100	120	52.22	0.132873
+11	KOAc	X-Phos	BuOAc	0.100	105	64.62	0.046569
+12	CsOPiv	X-Phos	BuOAc	0.153	105	5.53	0.124089
+13	KOPiv	X-Phos	BuOAc	0.100	105	48.25	0.045383
+14	CsOPiv	BrettPhos	BuOAc	0.100	105	27.48	0.244005
+15	KOAc	X-Phos	BuOAc	0.057	105	41.69	0.064998
+16	KOPiv	X-Phos	BuOAc	0.057	105	69.26	0.064059
+17	KOAc	X-Phos	BuOAc	0.100	120	73.71	0.046620
+18	CsOPiv	X-Phos	BuOAc	0.057	105	5.40	0.151168
+19	KOPiv	X-Phos	BuOAc	0.100	90	42.30	0.045349
+
+书生浦语：
+
+base	ligand	solvent	concentration	temperature	yield	cost
+0	CsOAc	BrettPhos	DMAc	0.100	105	4.74	0.191274
+1	CsOPiv	X-Phos	DMAc	0.100	105	29.16	0.120947
+2	KOAc	PPh3	p-Xylene	0.057	120	2.59	0.040396
+3	CsOAc	PPhMe2	BuCN	0.153	90	0.00	0.081433
+4	KOPiv	JackiePhos	DMAc	0.100	105	50.54	0.355063
+5	CsOAc	PCy3 HBF4	DMAc	0.100	90	4.02	0.077672
+6	KOAc	PPh2Me	p-Xylene	0.153	120	0.00	0.024273
+7	CsOPiv	tBPh-CPhos	DMAc	0.100	105	7.62	0.355308
+8	CsOAc	P(fur)3	BuOAc	0.100	105	15.72	0.095898
+9	KOPiv	GorlosPhos HBF4	DMAc	0.100	105	38.15	0.037421
+10	CsOPiv	JackiePhos	DMAc	0.100	105	0.00	0.442385
+11	KOPiv	X-Phos	DMAc	0.100	105	77.41	0.033618
+12	CsOAc	JackiePhos	DMAc	0.100	105	41.00	0.401630
+13	CsOPiv	GorlosPhos HBF4	DMAc	0.100	105	40.43	0.124896
+14	KOPiv	PPh3	DMAc	0.100	105	63.13	0.025379
+15	KOPiv	X-Phos	DMAc	0.153	105	82.28	0.028982
+16	KOPiv	X-Phos	DMAc	0.100	120	80.61	0.033627
+17	KOPiv	X-Phos	p-Xylene	0.100	105	35.07	0.035849
+18	KOPiv	PPh3	DMAc	0.153	105	71.11	0.020752
+19	KOPiv	JackiePhos	DMAc	0.153	105	11.68	0.350300
+20	KOPiv	X-Phos	p-Xylene	0.153	105	34.45	0.030443
+21	KOPiv	X-Phos	BuCN	0.153	105	73.33	0.041284
+22	KOPiv	X-Phos	DMAc	0.153	120	80.39	0.028976
+23	KOPiv	X-Phos	BuOAc	0.153	105	44.48	0.036840
+
+
+ Experiment_ID   base          ligand  solvent  concentration  temperature  yield     cost
+             1 CsOPiv       BrettPhos     DMAc          0.100          105   0.00 0.232133
+             2  CsOAc          X-Phos     DMAc          0.100          105  87.83 0.080243
+             3 CsOPiv      JackiePhos     BuCN          0.153          120  13.79 0.449817
+             4  CsOAc            PPh3     DMAc          0.057           90  36.96 0.082026
+             5 CsOPiv GorlosPhos HBF4 p-Xylene          0.100          105   9.89 0.127142
+             6  CsOAc        CgMe-PPh    BuOAc          0.153          105  50.69 0.106744
+             7 CsOPiv      tBPh-CPhos     DMAc          0.100          120  17.43 0.355336
+             8  CsOAc          PPhMe2     DMAc          0.100          105   0.00 0.074107
+             9 CsOPiv         P(fur)3     BuCN          0.057           90  26.30 0.165848
+            10  CsOAc       PCy3 HBF4     DMAc          0.153          105  10.25 0.073039
+            11  CsOAc          X-Phos     DMAc          0.153          105  84.48 0.075583
+            12  CsOAc       BrettPhos     DMAc          0.100          105   4.74 0.191274
+            13  CsOAc          X-Phos     BuCN          0.100          105  83.83 0.098456
+            14   KOAc          X-Phos     DMAc          0.100          105  65.37 0.034678
+            15  CsOAc      JackiePhos     DMAc          0.100          105  41.00 0.401630
+            16  CsOAc          X-Phos    BuOAc          0.100          105  86.43 0.092192
+            17  CsOAc          X-Phos p-Xylene          0.100          105  67.17 0.082561
+            18  CsOAc          X-Phos     DMAc          0.057          105  89.17 0.090374
+            19  CsOAc          X-Phos     BuCN          0.153          105  84.62 0.087966
+            20  CsOAc          X-Phos     DMAc          0.100          120  84.81 0.080234
+```
+
+
+
+更改提示词后:
+
+🎯 生成优化建议...
+
+================================================================================
+📝 输入大模型的完整提示词:
+================================================================================
+# Optimization Problem Context
+**Problem Description**: Optimization of the reaction conditions for a Pd-catalyzed direct C–H arylation between N1-methyl-1H-imidazole-4-carbonitrile and 1-bromo-2-fluorobenzene. This transformation forms a C(sp2)–C(sp2) bond selectively at the C-5 position of the imidazole ring through a Pd(0)/Pd(II) catalytic cycle involving oxidative addition of the aryl bromide, base-assisted C–H activation (CMD pathway), and reductive elimination to furnish the heterobiaryl product.
+**Industry Domain**: Chemical synthesis - organic reaction optimization
+**Domain Knowledge**: 
+    This is an optimization problem for a Pd-catalyzed direct C–H arylation
+    reaction, specifically the coupling of N1-methyl-1H-imidazole-4-carbonitrile
+    with 1-bromo-2-fluorobenzene. The overall transformation can be represented
+    as:
+
+        Im–H  +  Ar–Br  →  Ar–Im  +  HBr (neutralized by base)
+
+    Mechanistic background:
+    - The reaction proceeds through a Pd(0)/Pd(II) catalytic cycle:
+        (1) Oxidative addition of the aryl bromide to Pd(0)
+        (2) Base-assisted C–H activation of the imidazole (CMD-type mechanism)
+        (3) Reductive elimination to form the C–C coupled product
+        (4) Regeneration of Pd(0)
+
+    - The C-5 position of the imidazole is the most reactive site due to the
+      electron-withdrawing nitrile at C-4 and the N-methyl substituent, which
+      together influence the electronic distribution and regioselectivity.
+
+    Key domain factors affecting reaction performance:
+    - Base influences C–H activation efficiency, acidity of the imidazole C–H
+      bond, and HBr neutralization.
+    - Ligand strongly modulates oxidative addition rate, reductive elimination,
+      catalyst stability, and off-cycle Pd species.
+    - Solvent affects catalyst solvation, substrate and base solubility, and the
+      prevalence of side reactions (e.g., protodehalogenation or homocoupling).
+    - Concentration impacts effective collision frequency, catalyst aggregation,
+      and selectivity between productive and unproductive pathways.
+    - Temperature influences reaction kinetics, catalyst longevity, and
+      the balance between desired arylation and decomposition pathways.
+
+    Typical failure modes in this reaction class:
+    - Protodehalogenation of the aryl bromide
+    - Homocoupling (biaryl formation)
+    - Catalyst deactivation (Pd black)
+    - Over-arylation of the heteroarene under harsh conditions
+
+    The optimization objective is to maximize the yield of the mono-arylated
+    product while minimizing cost, considering catalyst stability, reagent
+    efficiency, and suppression of side reactions.
+    
+**Constraints**: All recommended parameter combinations must conform to basic chemical principles.
+**Optimization Goals**: Maximize yield, Minimize cost
+
+# Parameter Space Definition
+The following are the parameters to be optimized and their ranges:
+
+**Important Note**: If a parameter is discrete, you must select from the listed optional values and cannot choose other values; if a parameter is continuous, the value must be within the [minimum, maximum] range.
+1. **base**
+   Description: Type of base used in the reaction (e.g., CsOAc, KOAc, etc.), which strongly affects the yield and selectivity.
+   Type: Discrete parameter (must select one from the following values)
+   Optional values: [CsOAc, CsOPiv, KOAc, KOPiv]
+   Number of optional values: 4
+   ⚠️ Important: Only values from the list can be selected, no other values or intermediate values
+   Value type: str
+2. **ligand**
+   Description: Type of ligand utilized to stabilize the catalyst; ligands modulate reactivity and product distribution.
+   Type: Discrete parameter (must select one from the following values)
+   Optional values: [BrettPhos, CgMe-PPh, GorlosPhos HBF4, JackiePhos, P(fur)3, PCy3 HBF4, PPh2Me, PPh3, PPhMe2, PPhtBu2, X-Phos, tBPh-CPhos]
+   Number of optional values: 12
+   ⚠️ Important: Only values from the list can be selected, no other values or intermediate values
+   Value type: str
+3. **solvent**
+   Description: Type of solvent employed during the reaction; chosen for solubility and reaction rate optimization.
+   Type: Discrete parameter (must select one from the following values)
+   Optional values: [BuCN, BuOAc, DMAc, p-Xylene]
+   Number of optional values: 4
+   ⚠️ Important: Only values from the list can be selected, no other values or intermediate values
+   Value type: str
+4. **concentration**
+   Description: Concentration of reactants in molarity (M); controls the collision rate of molecules and thus the kinetics.
+   Type: Discrete parameter (must select one from the following values)
+   Optional values: [0.057, 0.1, 0.153]
+   Number of optional values: 3
+   ⚠️ Important: Only values from the list can be selected, no other values or intermediate values
+   Value type: float
+5. **temperature**
+   Description: Reaction temperature in degrees Celsius (°C); higher or lower temperatures can affect reaction speed and outcomes.
+   Type: Discrete parameter (must select one from the following values)
+   Optional values: [90, 105, 120]
+   Number of optional values: 3
+   ⚠️ Important: Only values from the list can be selected, no other values or intermediate values
+   Value type: int
+
+# Optimization Objectives
+Metrics to be optimized and their directions:
+- **yield**: maximize
+- **cost**: minimize
+
+**Note**: This is a multi-objective optimization problem that requires balancing multiple objectives.
+
+# Prior Experimental Data
+The following are 15 historical experimental results:
+
+```
+ Experiment_ID   base          ligand  solvent  concentration  temperature  yield     cost
+             1  CsOAc       BrettPhos     DMAc          0.100          105   4.74 0.191274
+             2 CsOPiv          X-Phos p-Xylene          0.153          120  68.31 0.118035
+             3   KOAc            PPh3     BuCN          0.057           90   4.30 0.067005
+             4  KOPiv      JackiePhos     DMAc          0.100          105  50.54 0.355063
+             5  CsOAc          PPhMe2    BuOAc          0.153           90   0.00 0.077302
+             6   KOAc        CgMe-PPh     DMAc          0.100          120  83.22 0.058004
+             7 CsOPiv GorlosPhos HBF4 p-Xylene          0.057          105  12.53 0.138920
+             8  KOPiv         P(fur)3     BuCN          0.153           90  52.20 0.045225
+             9  CsOAc       PCy3 HBF4     DMAc          0.100           90   4.02 0.077672
+            10   KOAc      tBPh-CPhos p-Xylene          0.057          120   0.15 0.283008
+            11   KOAc        CgMe-PPh     DMAc          0.153          120  98.38 0.053397
+            12 CsOPiv        CgMe-PPh     DMAc          0.100          120  83.85 0.144379
+            13   KOAc      JackiePhos     DMAc          0.100          120  75.12 0.356228
+            14   KOAc         P(fur)3     DMAc          0.100          120  60.48 0.038766
+            15  CsOAc        CgMe-PPh     DMAc          0.100          105  83.25 0.103504
+```
+
+# Optimization Task
+Based on the above information, please recommend 5 parameter configurations for the next experiment.
+
+**Optimization Direction Requirements**:
+- **yield**: Needs to be **maximized**, prioritize parameter combinations that can increase this metric value
+- **cost**: Needs to be **minimized**, prioritize parameter combinations that can reduce this metric value
+
+**Other Requirements**:
+1. **Parameter values must strictly conform to definitions**:
+   - For continuous parameters (range type), values must be within the [minimum, maximum] range
+   - For discrete parameters (choice type), values must **exactly equal** one of the values in the optional values list, no other values allowed
+   - For example: if optional values are ['A', 'B', 'C', 'D'], you can only choose one of these 4 values
+2. Only recommend a parameter combination if you are 80% confident that the experimental results from your recommended parameter combination will be better than the results in the prior data.
+2.1 If multiple parameter groups are required, recommend them in order of confidence from high to low until the requirement is met,and try to avoid recommending too similar combinations.
+3. Consider patterns and trends in the prior data, but do not be biased towards the prior data. When recommending results based on prior trends, use your pre-trained knowledge combined with the user's provided industry background knowledge to make a reasonable judgment regarding this recommendation.
+4. Balance between exploration and exploitation, good results may also be achieved in areas not covered by the prior experiments. So you should not only consider the prior data, but also consider industry/domain knowledge and your model's judgment to guide and refine your suggestions.
+5. If there are multiple objectives, consider multi-objective optimization (Pareto optimality)
+6. ⚠️ WARNING! Your recommendations must be based on reasoning from the prior data and your industry background knowledge, do not merely make recommendations based on prior data or only reason and recommend based on industry background knowledge. Instead, consider all factors comprehensively.
+7. ⚠️ WARNING! Your recommendations must not duplicate the prior data. The recommended parameter combinations must not already exist in the prior data
+8. Please explain in the recommendation reason why you recommend this parameter combination.
+
+
+Please return the recommended parameter configurations in JSON format as follows:
+```json
+{
+  "suggestions": [
+    {
+      "parameter_name_1": value1,
+      "parameter_name_2": value2,
+      ...,
+      "reason": "Recommendation reason"
+    }
+  ]
+}
+```
+================================================================================
+
+🤖 正在使用大模型生成优化建议...
+
+================================================================================
+📤 大模型的原始回答:
+================================================================================
+
+Okay, let's tackle this optimization problem. The goal is to find the best reaction conditions for the Pd-catalyzed direct C–H arylation between N1-methyl-1H-imidazole-4-carbonitrile and 1-bromo-2-fluorobenzene. The objectives are to maximize yield and minimize cost. 
+
+First, I need to look at the prior experimental data provided. There are 15 experiments with different combinations of base, ligand, solvent, concentration, and temperature. The highest yield so far is 98.38% in experiment 11, which used KOAc as the base, CgMe-PPh as the ligand, DMAc as the solvent, 0.153 M concentration, and 120°C. The cost here is 0.053397, which is relatively low. But maybe there's room for improvement in both yield and cost.
+
+Looking at the data, some patterns emerge. For instance, KOAc seems to be a good base, appearing in experiments with high yields (like 11, 12, 13, 14, 15). The ligand CgMe-PPh also appears in several high-yield experiments. The solvent DMAc is common in successful runs. Temperature at 120°C often gives higher yields, but maybe there's a balance with cost. Concentration varies, but 0.153 M is used in some high-yield cases.
+
+But wait, experiment 11 has the highest yield. However, the cost is already quite low. To minimize cost further, maybe using a cheaper ligand or base could help. However, the ligand options are fixed, and the cost might be influenced by the ligand's price. For example, some ligands like PPh3 might be cheaper than others. But in the prior data, PPh3 with KOAc (experiment 3) gave a low yield. So maybe sticking with CgMe-PPh is better for yield, but perhaps there's a cheaper solvent or lower concentration that still works.
+
+Another angle: the solvent. DMAc is used in several high-yield experiments. But p-Xylene is another option. Experiment 2 used p-Xylene with CsOPiv and X-Phos, giving 68.31% yield. Not as high as DMAc. BuCN and BuOAc have lower yields in some cases. So DMAc seems better for yield. But maybe using a different solvent could lower cost if it's cheaper, but the yield might drop. Need to balance.
+
+Concentration: 0.153 M is used in some high-yield cases. Lower concentrations (0.057) sometimes give lower yields. So higher concentration might be better for yield, but could cost more? Or maybe the cost is more influenced by the ligand and base. The cost metric here might be a composite of reagent costs, so using less expensive bases or ligands would help. CsOAc and CsOPiv might be more expensive than KOAc or KOPiv. So using KOAc could be cheaper. 
+
+Looking at experiment 11: KOAc, CgMe-PPh, DMAc, 0.153 M, 120°C. Yield 98.38%, cost 0.053. If we can find a similar setup with a slightly different parameter that reduces cost without sacrificing yield. For example, changing the ligand to a cheaper one that still maintains high yield. But in the data, other ligands with KOAc at 120°C: experiment 13 (JackiePhos) gave 75.12%, which is lower. Experiment 14 (P(fur)3) gave 60.48%. So CgMe-PPh seems better. So maybe changing the ligand isn't the way. What about concentration? Experiment 11 uses 0.153 M. If we lower concentration to 0.1 M, but keep other parameters, would yield drop? In experiment 15, same base and ligand, 0.1 M, 105°C, yield 83.25%. So lower temp and concentration reduce yield. So maybe keeping concentration at 0.153 is better.
+
+Another thought: temperature. Experiment 11 is at 120°C. If we lower the temperature but adjust other parameters, maybe cost can be reduced. But higher temps generally increase reaction rates but might lead to more side reactions. However, in the data, 120°C often gives higher yields. 
+
+What about the base? KOAc is used in high-yield experiments. CsOPiv in experiment 2 gave 68.31% with X-Phos. So KOAc seems better. 
+
+So the best parameters so far are KOAc, CgMe-PPh, DMAc, 0.153 M, 120°C. To find new combinations, we need to look for similar setups not already in the data. Let's check the prior experiments to avoid duplicates. 
+
+Looking at the prior data, experiment 11 is KOAc, CgMe-PPh, DMAc, 0.153, 120. So any new suggestion must differ in at least one parameter. Let's see:
+
+Possible options:
+
+1. Change solvent to p-Xylene but keep other parameters. But in experiment 10, KOAc, tBPh-CPhos, p-Xylene, 0.057, 120: yield 0.15. Not good. Maybe with CgMe-PPh and p-Xylene? Not tried yet. But would that work? Maybe not, since DMAc is polar aprotic and might be better for the reaction.
+
+2. Try a different ligand with KOAc. For example, in experiment 14, P(fur)3 with KOAc, DMAc, 0.1, 120: yield 60.48. Lower than CgMe-PPh. So maybe not better.
+
+3. Try a different base. CsOPiv with CgMe-PPh. In experiment 12: CsOPiv, CgMe-PPh, DMAc, 0.1, 120: yield 83.85. Lower than experiment 11. So not better.
+
+4. Concentration: experiment 11 uses 0.153. What if we use 0.1 M but adjust other parameters? Not sure.
+
+Alternatively, maybe using a different ligand that's cheaper but still gives high yield. For example, PPh3 is cheaper but in experiment 3 with KOAc, BuCN, 0.057, 90: yield 4.3. Not good. But maybe with higher concentration and temp? Not tried yet.
+
+Wait, the parameter combinations not yet tried could be:
+
+- KOAc, CgMe-PPh, DMAc, 0.153, 120 (already in data as experiment 11). So need to change at least one parameter.
+
+What if we change the solvent to BuOAc? In experiment 5, CsOAc, PPhMe2, BuOAc, 0.153, 90: yield 0. Not good. But with KOAc and CgMe-PPh in BuOAc? Not tried. Maybe not.
+
+Another approach: look for high-yield trends. KOAc and CgMe-PPh in DMAc at 120°C with 0.153 M gives high yield. To minimize cost, perhaps using a lower concentration but higher temp? Or maybe a different ligand that's cheaper but requires different conditions.
+
+Wait, the cost in experiment 11 is already very low. Maybe the cost can't be reduced much further without sacrificing yield. So perhaps the next best is to find a combination that maintains high yield but uses a cheaper ligand or base. Alternatively, maybe a different solvent that's cheaper but still allows high yield.
+
+Alternatively, looking at experiment 12: CsOPiv, CgMe-PPh, DMAc, 0.1, 120: yield 83.85. If we increase concentration to 0.153, maybe yield increases. But CsOPiv might be more expensive than KOAc, so cost might be higher. Not helpful for minimizing cost.
+
+Another angle: the ligand. CgMe-PPh is used in several high-yield experiments. Other ligands like BrettPhos (experiment 1: CsOAc, BrettPhos, DMAc, 0.1, 105: yield 4.74) didn't do well. X-Phos in experiment 2 with CsOPiv, p-Xylene: 68.31. So CgMe-PPh seems better.
+
+So perhaps the best approach is to stick with KOAc, CgMe-PPh, DMAc, 0.153 M, 120°C but adjust one parameter that might not be in the prior data. Wait, but that exact combination is already in the data (experiment 11). So need to find a new combination.
+
+Wait, what about changing the concentration to 0.1 M but keeping other parameters? Experiment 15: KOAc, CgMe-PPh, DMAc, 0.1, 105: yield 83.25. If we increase temperature to 120°C with 0.1 M, would that give higher yield? Not tried yet. Let's see if any experiment has KOAc, CgMe-PPh, DMAc, 0.1, 120. Looking at the data, experiment 12 is CsOPiv, CgMe-PPh, DMAc, 0.1, 120. Experiment 13 is KOAc, JackiePhos, DMAc, 0.1, 120. So the combination of KOAc, CgMe-PPh, DMAc, 0.1, 120 hasn't been tried. That could be a candidate. The yield might be lower than 0.153 M but maybe still high, and cost could be lower because of lower concentration? Or maybe the cost is not directly related to concentration here. The cost metric in the data might be a composite, so lower concentration might reduce cost. For example, using less reactant could lower cost, but if the yield is lower, then the overall cost per product might be higher. Hmm, this is a bit unclear. The cost metric here might be a calculated value based on reagent costs, so maybe the concentration affects the cost. If 0.1 M uses less material, perhaps the cost is lower. But if the yield is lower, then the effective cost per product might be higher. However, the optimization goal is to minimize cost as a separate metric, not cost per yield. So if the cost is a direct function of the parameters, then lower concentration might reduce cost. But without knowing the exact cost calculation, it's hard to say. However, in the prior data, experiment 11 has a cost of 0.053, which is the lowest. So maybe changing parameters to reduce cost further would require cheaper reagents.
+
+Another option: using KOAc instead of CsOPiv, which is likely cheaper. So maybe combining KOAc with a different ligand that's cheaper. For example, PPh3. But in experiment 3, that combination gave low yield. However, maybe with higher concentration and temperature. But PPh3 hasn't been tried with KOAc at 0.153 M and 120°C. Let's check: experiment 3 is KOAc, PPh3, BuCN, 0.057, 90. If we try KOAc, PPh3, DMAc, 0.153, 120. That's a new combination. Would that work? PPh3 might not be as effective as CgMe-PPh, but maybe in higher concentration and temp, it could perform better. However, based on prior data, PPh3 didn't do well. So maybe not.
+
+Alternatively, using JackiePhos with KOAc. Experiment 13: KOAc, JackiePhos, DMAc, 0.1, 120: yield 75.12. If we increase concentration to 0.153, maybe yield increases. But JackiePhos might be more expensive than CgMe-PPh, so cost might not decrease.
+
+Another angle: solvent. DMAc is used in high-yield experiments. What if we try p-Xylene with KOAc and CgMe-PPh? Not tried yet. For example, KOAc, CgMe-PPh, p-Xylene, 0.153, 120. That's a new combination. Would that work? p-Xylene is a non-polar solvent, which might not solubilize the reactants as well, but maybe under high temp, it could work. However, in experiment 2, CsOPiv, X-Phos, p-Xylene, 0.153, 120: yield 68.31. So maybe with KOAc and CgMe-PPh, it could be better. But not sure. This is a bit of a gamble.
+
+Alternatively, looking at the cost metric. The lowest cost in the data is experiment 14: 0.038766 with KOAc, P(fur)3, DMAc, 0.1, 120. But yield is 60.48. If we can find a combination with cost lower than 0.053 and yield higher than 98.38, but that's unlikely. So maybe the next best is to find a combination with yield close to 98% but lower cost. But how?
+
+Wait, experiment 11's cost is 0.053. The next lowest is experiment 14 at 0.038, but lower yield. So perhaps there's a trade-off. The optimization needs to balance both. Maybe a combination that's slightly lower yield but much lower cost could be better in Pareto terms. But the user wants to maximize yield and minimize cost. So ideally, find a point that's better in both, but if not possible, find a Pareto optimal point.
+
+Another observation: in experiment 11, the parameters are KOAc, CgMe-PPh, DMAc, 0.153, 120. To find a new combination, perhaps changing the ligand to a similar one but cheaper. For example, CgMe-PPh vs. another ligand. But without knowing the cost of each ligand, it's hard to say. Assuming that all ligands have similar costs except for some, but the user hasn't specified. So maybe the cost is more influenced by the base. KOAc is cheaper than CsOPiv, so using KOAc is better for cost.
+
+So, possible new combinations:
+
+1. KOAc, CgMe-PPh, DMAc, 0.153, 120 (already exists as experiment 11). So can't use that.
+
+2. KOAc, CgMe-PPh, DMAc, 0.1, 120. This hasn't been tried. Let's see: in experiment 15, same base and ligand, DMAc, 0.1, 105: yield 83.25. If we increase temp to 120, maybe yield increases. This could be a candidate. The cost might be lower due to lower concentration, but yield might be slightly lower than 98.38. But if the yield is still high and cost lower, this could be a good trade-off.
+
+3. KOAc, CgMe-PPh, DMAc, 0.153, 105. But experiment 15 is 0.1, 105. Not sure.
+
+Another option: changing the solvent to BuCN. In experiment 8: KOPiv, P(fur)3, BuCN, 0.153, 90: yield 52.2. Not great. But with KOAc and CgMe-PPh in BuCN? Not tried. Maybe not.
+
+Alternatively, using JackiePhos with KOAc, DMAc, 0.153, 120. Experiment 13 is 0.1 concentration. If we increase to 0.153, maybe yield increases. But JackiePhos might not be as effective as CgMe-PPh.
+
+Wait, the user wants 5 suggestions. Let's think of the top options:
+
+1. KOAc, CgMe-PPh, DMAc, 0.1, 120. This is a new combination. The concentration is lower, which might reduce cost, and if the yield remains high (maybe around 90-95%), it could be better. The prior data with 0.1 M and same base/ligand/solvent at 105°C gave 83.25%, so at 120°C, maybe higher.
+
+2. KOAc, CgMe-PPh, DMAc, 0.153, 105. But experiment 15 is 0.1, 105. Not sure.
+
+Wait, experiment 11 is the highest yield. To find a better one, maybe adjust a parameter that could improve yield. For example, changing the ligand to something similar but better. But in the data, CgMe-PPh is already the best. Alternatively, changing the base to CsOAc with CgMe-PPh. Experiment 15: CsOAc, CgMe-PPh, DMAc, 0.1, 105: yield 83.25. Lower than KOAc. So not better.
+
+Another angle: the solvent. DMAc is good, but maybe a mixture? Not allowed here; solvent must be one of the four. So stick with DMAc.
+
+What about using KOAc, CgMe-PPh, DMAc, 0.153, 120 but changing the ligand to a similar one. Wait, no, that's experiment 11. So need to find other combinations.
+
+Wait, looking at the ligand options, there's tBPh-CPhos. Experiment 10: KOAc, tBPh-CPhos, p-Xylene, 0.057, 120: yield 0.15. Not good. But with DMAc and higher concentration? Not tried.
+
+Alternatively, using PPhMe2. Experiment 5: CsOAc, PPhMe2, BuOAc, 0.153, 90: yield 0. Not good.
+
+Hmm. Maybe the best approach is to stick with KOAc, CgMe-PPh, DMAc, 0.153, 120 but change one parameter that might not affect yield much but reduces cost. However, since that exact combination is already in the data, we need to find a new one.
+
+Wait, what about changing the base to KOPiv? Experiment 4: KOPiv, JackiePhos, DMAc, 0.1, 105: yield 50.54. Not great. But with CgMe-PPh and higher temp? Not tried.
+
+Alternatively, using CsOPiv with CgMe-PPh, DMAc, 0.153, 120. Experiment 12 is CsOPiv, CgMe-PPh, DMAc, 0.1, 120: yield 83.85. If we increase concentration to 0.153, maybe yield increases. But CsOPiv might be more expensive than KOAc, so cost might not decrease.
+
+Another thought: the cost in experiment 11 is already very low. Maybe the next best is to find a combination with slightly lower yield but same or lower cost. For example, experiment 12 has a cost of 0.144, which is higher. Experiment 14 has lower cost but lower yield.
+
+Wait, the cost metric might be a combination of reagent costs and reaction conditions. For example, higher temperature might increase cost due to energy, but in the data, experiment 11 has 120°C and low cost. So maybe the cost is more influenced by the reagents.
+
+Assuming that KOAc is cheaper than CsOPiv, using KOAc is better. CgMe-PPh's cost is unknown, but if it's a common ligand, maybe it's not too expensive. DMAc is a common solvent, so cost might be manageable.
+
+So, possible suggestions:
+
+1. KOAc, CgMe-PPh, DMAc, 0.1, 120. This hasn't been tried. Lower concentration might reduce cost, and higher temp might maintain yield. If yield is around 90%, it's a good balance.
+
+2. KOAc, CgMe-PPh, DMAc, 0.153, 105. But experiment 15 is 0.1, 105. Not sure.
+
+Wait, experiment 15: KOAc, CgMe-PPh, DMAc, 0.1, 105: yield 83.25. If we increase temp to 120 with same concentration, maybe yield increases. So suggestion 1 could be that.
+
+Another option: KOAc, CgMe-PPh, DMAc, 0.153, 120 (already exists). So can't use that.
+
+What about changing the ligand to a similar one but cheaper. For example, PPhMe2. But in experiment 5, it didn't work well. Not likely.
+
+Another approach: look for combinations that have high yield in the data and slightly tweak one parameter. For example, experiment 11 is the best. To find a new one, maybe change the solvent to p-Xylene but keep other parameters. But would that work? Not sure. Alternatively, change the base to CsOAc. Experiment 15: CsOAc, CgMe-PPh, DMAc, 0.1, 105: yield 83.25. Lower than KOAc.
+
+Alternatively, using KOAc, CgMe-PPh, DMAc, 0.153, 120 (experiment 11) is the best. To find new combinations, perhaps try different ligands with KOAc and DMAc at 0.153 and 120. For example:
+
+- KOAc, JackiePhos, DMAc, 0.153, 120. Not tried. Experiment 13 is 0.1 concentration. If we increase to 0.153, maybe yield increases. JackiePhos might be more expensive, though.
+
+- KOAc, P(fur)3, DMAc, 0.153, 120. Experiment 14 is 0.1 concentration. If we increase to 0.153, maybe yield increases. But P(fur)3 in experiment 14 gave 60.48% at 0.1, so maybe higher concentration helps.
+
+But without prior data on these combinations, it's risky. However, the user wants recommendations based on prior data and domain knowledge. 
+
+In the domain knowledge, the ligand modulates oxidative addition and reductive elimination. CgMe-PPh seems effective. Other ligands like X-Phos or BrettPhos might not be as good. 
+
+So, the safest bets are combinations close to experiment 11 but with one parameter changed. For example:
+
+1. KOAc, CgMe-PPh, DMAc, 0.1, 120. (new)
+2. KOAc, CgMe-PPh, DMAc, 0.153, 105. (new)
+3. KOAc, CgMe-PPh, BuCN, 0.153, 120. (new)
+4. KOAc, CgMe-PPh, p-Xylene, 0.153, 120. (new)
+5. KOAc, CgMe-PPh, DMAc, 0.153, 120 (already exists, so no)
+
+But need to check if these are in prior data. For example, KOAc, CgMe-PPh, DMAc, 0.1, 120 hasn't been tried. Experiment 15 is 0.1, 105. So suggestion 1 is valid.
+
+Another angle: the concentration of 0.153 M is used in experiment 11. Maybe using 0.1 M with higher temperature could save cost (less material) while maintaining yield. If the yield is slightly lower but cost is much lower, it could be better. But need to estimate.
+
+Alternatively, using a different solvent that's cheaper. DMAc is a bit expensive, maybe BuCN is cheaper. But in experiment 3, BuCN with KOAc and PPh3 gave low yield. But with CgMe-PPh, maybe better.
+
+So, possible suggestions:
+
+1. KOAc, CgMe-PPh, DMAc, 0.1, 120
+   - Reason: Lower concentration may reduce cost, higher temp may maintain yield. Similar to experiment 11 but adjusted.
+
+2. KOAc, CgMe-PPh, DMAc, 0.153, 105
+   - Reason: Lower temp may reduce energy cost, but yield might drop. However, experiment 15 at 0.1, 105 had 83.25%, so higher concentration might help.
+
+3. KOAc, CgMe-PPh, BuCN, 0.153, 120
+   - Reason: Different solvent, maybe cheaper. But risk of lower yield.
+
+4. KOAc, CgMe-PPh, p-Xylene, 0.153, 120
+   - Reason: Non-polar solvent, maybe cheaper. But may affect solubility.
+
+5. KOAc, JackiePhos, DMAc, 0.153, 120
+   - Reason: Different ligand, maybe cheaper. But JackiePhos in experiment 13 at 0.1 gave 75.12%, so higher concentration might improve.
+
+But need to check if these combinations are not in prior data. For example, suggestion 1 is new. Suggestion 2: KOAc, CgMe-PPh, DMAc, 0.153, 105. Not in data. Suggestion 3: new. Suggestion 4: new. Suggestion 5: new.
+
+However, based on domain knowledge, changing the solvent to non-polar like p-Xylene might not be good for solubility of polar reactants. DMAc is a good solvent for such reactions. So maybe suggestions 3 and 4 are less likely to work. 
+
+Another option: using KOPiv as the base. Experiment 4: KOPiv, JackiePhos, DMAc, 0.1, 105: yield 50.54. Not great. But with CgMe-PPh and higher concentration?
+
+Alternatively, using CsOPiv with CgMe-PPh, DMAc, 0.153, 120. Not tried. But CsOPiv might be more expensive.
+
+Considering all this, the top suggestions would be variations around the best-performing parameters but with one change to explore and possibly reduce cost. The highest confidence would be in combinations that tweak concentration or temperature slightly, keeping the effective base and ligand.
+
+So, final suggestions:
+
+1. KOAc, CgMe-PPh, DMAc, 0.1, 120
+   - Reason: Lower concentration reduces material cost, higher temp maintains reaction efficiency. Likely high yield close to experiment 11.
+
+2. KOAc, CgMe-PPh, DMAc, 0.153, 105
+   - Reason: Lower temp reduces energy cost, same other parameters. Might have slightly lower yield but lower cost.
+
+3. KOAc, CgMe-PPh, DMAc, 0.1, 105 (but experiment 15 is this except temp 105, which is already there. Wait, experiment 15 is 0.1, 105. So this is duplicate. So can't use that.)
+
+Wait, need to ensure no duplicates. So suggestion 2 is new.
+
+Another option: changing the ligand to a similar one. For example, using PPhMe2. But not sure.
+
+Alternatively, using KOAc, CgMe-PPh, DMAc, 0.153, 120 (already exists). So can't.
+
+Another possibility: using KOAc, CgMe-PPh, DMAc, 0.153, 120 (experiment 11) is the best. To find new ones, maybe try different ligands that are similar. For example, JackiePhos with higher concentration. But not sure.
+
+Alternatively, using KOAc, CgMe-PPh, DMAc, 0.153, 120 (experiment 11) is the best. Next best is experiment 12: CsOPiv, CgMe-PPh, DMAc, 0.1, 120. If we change base to KOAc and increase concentration, but that's experiment 11.
+
+Hmm. Maybe the next best is to try different ligands with KOAc and DMAc at 0.153 and 120. For example:
+
+- KOAc, BrettPhos, DMAc, 0.153, 120. Not tried. BrettPhos in experiment 1 with CsOAc gave low yield. But with KOAc?
+
+But without prior data, it's risky. However, the user wants recommendations based on prior data and domain knowledge. Since CgMe-PPh is the best ligand in the data, deviating from it might lower yield. So the safest bets are combinations with KOAc, CgMe-PPh, DMAc, varying concentration and temperature.
+
+So, the five suggestions could be:
+
+1. KOAc, CgMe-PPh, DMAc, 0.1, 120
+   - Reason: Lower concentration reduces cost, higher temp maintains reaction rate. Likely high yield.
+
+2. KOAc, CgMe-PPh, DMAc, 0.153, 105
+   - Reason: Lower temp reduces energy cost, same other parameters. Might have slightly lower yield but lower cost.
+
+3. KOAc, CgMe-PPh, DMAc, 0.1, 105 (duplicate of experiment 15? No, experiment 15 is 0.1, 105. So this is new. Wait, experiment 15 is KOAc, CgMe-PPh, DMAc, 0.1, 105. So this is duplicate. Can't use that.
+
+Oops, need to check. Experiment 15 is KOAc, CgMe-PPh, DMAc, 0.1, 105. So suggestion 3 would be duplicate. So can't.
+
+Next option: change solvent to BuOAc. But in experiment 5, CsOAc, PPhMe2, BuOAc, 0.153, 90: yield 0. Not good. But with KOAc and CgMe-PPh? Not tried. Maybe:
+
+3. KOAc, CgMe-PPh, BuOAc, 0.153, 120
+   - Reason: Different solvent, maybe cheaper. But risk of lower yield.
+
+But domain knowledge says DMAc is better for solubility. So this might not be good.
+
+Another option: using KOAc, CgMe-PPh, DMAc, 0.153, 120 (experiment 11) is the best. Next, try different ligands that are similar. For example, using PPhMe2. But not sure.
+
+Alternatively, using KOAc, CgMe-PPh, DMAc, 0.153, 120 (experiment 11) and four other combinations that tweak one parameter each. But need to ensure no duplicates.
+
+So, final five suggestions:
+
+1. KOAc, CgMe-PPh, DMAc, 0.1, 120
+   - Reason: Lower concentration reduces cost, higher temp maintains yield. New combination.
+
+2. KOAc, CgMe-PPh, DMAc, 0.153, 105
+   - Reason: Lower temp reduces energy cost. New combination.
+
+3. KOAc, CgMe-PPh, DMAc, 0.1, 105 (duplicate of experiment 15, so no)
+
+Wait, experiment 15 is KOAc, CgMe-PPh, DMAc, 0.1, 105. So can't use that. So next:
+
+3. KOAc, CgMe-PPh, DMAc, 0.153, 90
+   - Lower temp, but may reduce yield. Not tried.
+
+But lower temp might not be good. Alternatively:
+
+3. KOAc, CgMe-PPh, DMAc, 0.153, 120 (experiment 11, can't use)
+
+Hmm. Maybe change the base to CsOAc with CgMe-PPh. Experiment 15 is CsOAc, CgMe-PPh, DMAc, 0.1, 105. If we use CsOAc, CgMe-PPh, DMAc, 0.153, 120. Not tried. But CsOAc might be more expensive, so cost might not decrease.
+
+Alternatively, using KOPiv as base. Experiment 4: KOPiv, JackiePhos, DMAc, 0.1, 105. Not good. But with CgMe-PPh?
+
+This is getting complicated. Given the time constraints, I'll proceed with the top suggestions that are new and have a good chance based on prior data and domain knowledge.
+
+```json
+{
+  "suggestions": [
+    {
+      "base": "KOAc",
+      "ligand": "CgMe-PPh",
+      "solvent": "DMAc",
+      "concentration": 0.1,
+      "temperature": 120,
+      "reason": "This combination reduces concentration to 0.1 M (lower material cost) while maintaining the effective base/ligand/solvent system (KOAc/CgMe-PPh/DMAc) and high temperature (120°C) to preserve reaction efficiency. Prior data (Experiment 15) shows 83.25% yield at 0.1 M and 105°C; increasing temperature to 120°C may further improve yield while keeping costs low."
+    },
+    {
+      "base": "KOAc",
+      "ligand": "CgMe-PPh",
+      "solvent": "DMAc",
+      "concentration": 0.153,
+      "temperature": 105,
+      "reason": "This adjusts temperature to 105°C (lower energy cost) while retaining the high-performing base/ligand/solvent system and concentration. Experiment 15 (0.1 M, 105°C) achieved 83.25% yield; increasing concentration to 0.153 M may compensate for reduced temperature and maintain high yield."
+    },
+    {
+      "base": "KOPiv",
+      "ligand": "CgMe-PPh",
+      "solvent": "DMAc",
+      "concentration": 0.153,
+      "temperature": 120,
+      "reason": "Replaces KOAc with KOPiv (potentially cheaper base) while retaining the effective ligand/solvent system and high concentration/temperature. Experiment 12 (CsOPiv, CgMe-PPh, DMAc, 0.1 M, 120°C) achieved 83.85% yield; increasing concentration to 0.153 M and switching to KOPiv may improve yield and cost efficiency."
+    },
+    {
+      "base": "KOAc",
+      "ligand": "JackiePhos",
+      "solvent": "DMAc",
+      "concentration": 0.153,
+      "temperature": 120,
+      "reason": "Uses JackiePhos (a sterically demanding ligand) with KOAc/DMAc at high concentration/temperature. Experiment 13 (JackiePhos, KOAc, DMAc, 0.1 M, 120°C) achieved 75.12% yield; increasing concentration to 0.153 M may enhance yield while leveraging JackiePhos' potential for improved catalyst stability."
+    },
+    {
+      "base": "CsOPiv",
+      "ligand": "CgMe-PPh",
+      "solvent": "p-Xylene",
+      "concentration": 0.153,
+      "temperature": 120,
+      "reason": "Tests p-Xylene (non-polar solvent) with CsOPiv/CgMe-PPh at high concentration/temperature. Experiment 2 (CsOPiv, X-Phos, p-Xylene, 0.153 M, 120°C) achieved 68.31% yield; switching to CgMe-PPh may improve yield in this solvent system while reducing ligand cost."
+    }
+  ]
+}
+```
+================================================================================
+
+✅ 成功生成 5 个建议
+
+
+test1
+```
+ Experiment_ID   base          ligand  solvent  concentration  temperature  yield     cost
+             1  CsOAc       BrettPhos     DMAc          0.100          105   4.74 0.191274
+             2 CsOPiv          X-Phos p-Xylene          0.153          120  68.31 0.118035
+             3   KOAc            PPh3     BuCN          0.057           90   4.30 0.067005
+             4  KOPiv      JackiePhos     DMAc          0.100          105  50.54 0.355063
+             5  CsOAc          PPhMe2    BuOAc          0.153           90   0.00 0.077302
+             6   KOAc        CgMe-PPh     DMAc          0.100          120  83.22 0.058004
+             7 CsOPiv GorlosPhos HBF4 p-Xylene          0.057          105  12.53 0.138920
+             8  KOPiv         P(fur)3     BuCN          0.153           90  52.20 0.045225
+             9  CsOAc       PCy3 HBF4     DMAc          0.100           90   4.02 0.077672
+            10   KOAc      tBPh-CPhos p-Xylene          0.057          120   0.15 0.283008
+            11   KOAc        CgMe-PPh     DMAc          0.153          120  98.38 0.053397
+            12 CsOPiv        CgMe-PPh     DMAc          0.100          120  83.85 0.144379
+            13   KOAc      JackiePhos     DMAc          0.100          120  75.12 0.356228
+            14   KOAc         P(fur)3     DMAc          0.100          120  60.48 0.038766
+            15  CsOAc        CgMe-PPh     DMAc          0.100          105  83.25 0.103504
+            16   KOAc        CgMe-PPh     DMAc          0.100          120  83.22 0.058004
+            17   KOAc        CgMe-PPh     DMAc          0.153          105  87.00 0.053364
+            18  KOPiv        CgMe-PPh     DMAc          0.153          120  99.81 0.052307
+            19   KOAc      JackiePhos     DMAc          0.153          120  85.21 0.351607
+            20 CsOPiv        CgMe-PPh p-Xylene          0.153          120  19.13 0.141130
+```
+
+
+
+test2:
+```
+ Experiment_ID   base          ligand  solvent  concentration  temperature  yield     cost
+             1  CsOAc       BrettPhos     DMAc          0.100          105   4.74 0.191274
+             2 CsOPiv          X-Phos p-Xylene          0.153          120  68.31 0.118035
+             3   KOAc      JackiePhos     BuCN          0.057           90  20.50 0.396849
+             4  CsOAc GorlosPhos HBF4     DMAc          0.153          105  59.83 0.079428
+             5  KOPiv          PPhMe2 p-Xylene          0.100          120   0.00 0.029839
+             6 CsOPiv      tBPh-CPhos    BuOAc          0.057           90  16.51 0.385653
+             7   KOAc         P(fur)3     DMAc          0.100          105  41.90 0.038713
+             8  CsOAc       PCy3 HBF4 p-Xylene          0.153           90   0.00 0.074583
+             9  KOPiv        CgMe-PPh     BuCN          0.100          120  70.51 0.075033
+            10 CsOPiv            PPh3     DMAc          0.057          105  59.68 0.122965
+            11 CsOPiv        CgMe-PPh     BuCN          0.153          120  71.81 0.152015
+            12 CsOPiv          X-Phos     DMAc          0.153          120  48.34 0.116352
+            13  CsOAc GorlosPhos HBF4     DMAc          0.153          120  40.26 0.079372
+            14  KOPiv        CgMe-PPh     DMAc          0.153          120  99.81 0.052307
+            15 CsOPiv      tBPh-CPhos     DMAc          0.153          120   9.96 0.350664
+```
+
+
+base	ligand	solvent	concentration	temperature	yield	cost
+0	CsOAc	BrettPhos	DMAc	0.100	105	4.74	0.191274
+1	CsOPiv	X-Phos	p-Xylene	0.153	120	68.31	0.118035
+2	KOAc	PPh3	BuCN	0.057	90	4.30	0.067005
+3	CsOAc	JackiePhos	DMAc	0.153	90	11.77	0.396895
+4	KOPiv	GorlosPhos HBF4	p-Xylene	0.100	105	10.98	0.039678
+5	CsOPiv	tBPh-CPhos	BuOAc	0.057	120	8.24	0.385607
+6	KOAc	PPhMe2	DMAc	0.100	90	0.00	0.028606
+7	CsOAc	CgMe-PPh	p-Xylene	0.153	105	80.69	0.100481
+8	KOPiv	PPhtBu2	BuCN	0.057	90	0.00	0.082787
+9	CsOPiv	P(fur)3	DMAc	0.100	120	62.32	0.125145
+10	CsOPiv	CgMe-PPh	p-Xylene	0.153	105	19.28	0.141130
+11	CsOAc	X-Phos	p-Xylene	0.153	105	76.63	0.077192
+12	CsOAc	CgMe-PPh	DMAc	0.153	105	100.00	0.098902
+13	CsOAc	CgMe-PPh	p-Xylene	0.100	105	68.35	0.105840
+14	CsOAc	CgMe-PPh	p-Xylene	0.153	120	91.19	0.100520
+15	CsOAc	CgMe-PPh	DMAc	0.153	120	99.22	0.098900
+16	CsOAc	X-Phos	DMAc	0.153	105	84.48	0.075583
+17	CsOAc	CgMe-PPh	p-Xylene	0.100	120	62.73	0.105820
+18	CsOAc	CgMe-PPh	DMAc	0.100	105	83.25	0.103504
+19	CsOPiv	CgMe-PPh	DMAc	0.153	105	100.00	0.139775
+20	CsOAc	CgMe-PPh	DMAc	0.100	120	81.63	0.103499
+21	CsOAc	X-Phos	DMAc	0.153	120	84.49	0.075583
+22	CsOPiv	CgMe-PPh	DMAc	0.153	120	92.19	0.139753
+23	CsOAc	CgMe-PPh	BuCN	0.153	120	99.98	0.111358
+24	KOPiv	CgMe-PPh	DMAc	0.153	105	98.49	0.052303
